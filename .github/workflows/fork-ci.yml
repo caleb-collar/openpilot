@@ -72,3 +72,58 @@ jobs:
       - name: No fork-touched Python yet
         if: steps.files.outputs.count == '0'
         run: echo "No Python files changed since the upstream base; skipping."
+
+  invariants:
+    name: Prebuilt-branch invariants (I1, I6, D4, installer)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: fork/scripts/check_invariants.sh HEAD
+
+  safety:
+    name: Panda safety (tests, 100% coverage, MISRA, mutation)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: opendbc_repo/uv.lock
+      - run: fork/scripts/safety_tests.sh
+
+  firmware:
+    name: Panda firmware reproducible from sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Strict on r1t-dev, the device branch, sync branches, and PRs. Advisory on feat/fix branches,
+    # where safety sources may be ahead of the final build(panda) commit (plan Phase 4).
+    continue-on-error: ${{ startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/fix/') }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: fork/scripts/build_firmware.sh --verify --out "$RUNNER_TEMP/fw"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: panda-firmware-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/fw/*.bin.signed
+            ${{ runner.temp }}/fw/bootstub.*.bin
+            ${{ runner.temp }}/fw/version
+            ${{ runner.temp }}/fw/SHA256SUMS
+            ${{ runner.temp }}/fw/build.log
+          if-no-files-found: warn
+          retention-days: 30
