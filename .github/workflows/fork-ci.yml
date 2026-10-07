@@ -1,0 +1,74 @@
+name: fork-ci
+
+# Lightweight checks for the r1t-xnor-adventure fork. Everything is scoped to commits and files
+# after the branch root (the upstream xnor rx-dev prebuilt), so upstream content is never linted.
+on:
+  push:
+    branches: [r1t-xnor-adventure, r1t-dev, 'feat/**', 'fix/**', 'sync/**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  commit-lint:
+    name: Conventional Commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Lint fork commits (root..HEAD)
+        run: |
+          set -euo pipefail
+          root="$(git rev-list --max-parents=0 HEAD | tail -n1)"
+          echo "branch root (upstream prebuilt): $root"
+          status=0
+          for sha in $(git rev-list --no-merges "$root..HEAD"); do
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/msg"
+            if .githooks/commit-msg "$RUNNER_TEMP/msg"; then
+              echo "✔ $(git log -1 --format='%h %s' "$sha")"
+            else
+              echo "::error::commit $sha does not follow Conventional Commits"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  python:
+    name: Python syntax & lint (fork-touched files)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Collect changed Python files
+        id: files
+        run: |
+          set -euo pipefail
+          root="$(git rev-list --max-parents=0 HEAD | tail -n1)"
+          git diff --name-only --diff-filter=ACMR "$root" HEAD -- '*.py' > "$RUNNER_TEMP/py_files"
+          echo "count=$(wc -l < "$RUNNER_TEMP/py_files")" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/py_files"
+      - name: py_compile
+        if: steps.files.outputs.count != '0'
+        run: xargs -a "$RUNNER_TEMP/py_files" -d '\n' python -m py_compile
+      - name: ruff (version pinned to uv.lock)
+        if: steps.files.outputs.count != '0'
+        run: |
+          pip install --quiet "ruff==0.16.3"
+          xargs -a "$RUNNER_TEMP/py_files" -d '\n' ruff check --force-exclude
+      - name: No fork-touched Python yet
+        if: steps.files.outputs.count == '0'
+        run: echo "No Python files changed since the upstream base; skipping."
