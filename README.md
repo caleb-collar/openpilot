@@ -1,74 +1,102 @@
-![](https://user-images.githubusercontent.com/47793918/233812617-beab2e71-57b9-479e-8bff-c3931347ca40.png)
+# openpilot: Rivian R1T (`r1t-xnor-adventure`)
 
-## 🌞 What is sunnypilot?
-[sunnypilot](https://github.com/sunnyhaibin/sunnypilot) is a fork of comma.ai's openpilot, an open source driver assistance system. sunnypilot offers the user a unique driving experience for over 300+ supported car makes and models with modified behaviors of driving assist engagements. sunnypilot complies with comma.ai's safety rules as accurately as possible.
+A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilot fork for the **Rivian R1T**. It combines:
 
-## 💭 Join our Community Forum
-Join the official sunnypilot community forum to stay up to date with all the latest features and be a part of shaping the future of sunnypilot!
-* https://community.sunnypilot.ai/
+* **xnor-tech [`rx-dev`](https://github.com/xnor-tech/openpilot/tree/rx-dev)**: angle-based lateral control through the angle harness, plus low-speed oscillation smoothing.
+* **AdventurePilot [`stg-a`](https://github.com/AdventurePilotDev/openpilot/tree/stg-a)** gear-stalk MADS semantics: an upward stalk flick toggles or disengages lateral control, and lateral control disengages in Park and Reverse. Includes the matching panda safety support.
 
-## Documentation
-https://docs.sunnypilot.ai/ is your one stop shop for everything from features to installation to FAQ about the sunnypilot
+> [!WARNING]
+> **This is alpha-quality research software, not a product.** It modifies lateral control and panda safety firmware.
+> You are responsible for complying with local laws and for driving attentively at all times. No warranty, expressed or implied.
 
-## 🚘 Running on a dedicated device in a car
-First, check out this list of items you'll need to [get started](https://community.sunnypilot.ai/t/getting-started-using-sunnypilot-in-your-supported-car/251).
+## Status
+
+| Area | State |
+|---|---|
+| Base | `xnor-tech/openpilot` `rx-dev` prebuilt `8a627abb0` |
+| Fork infrastructure (docs, commit conventions, CI) | ✅ |
+| Gear-stalk MADS parity (panda safety + Python) | 🚧 In progress. See [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md) |
+| Releases | None yet. See [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md) |
+
+### Planned stalk behavior
+
+| Gesture | Effect |
+|---|---|
+| Stalk **up, first detent** (UP_1) with ACC off | Toggle MADS lateral (lateral-only "Mode B") |
+| Stalk **up, past detent** (UP_2) | Fully disengage lateral. Engagement is blocked while held |
+| Shift to **Park** / **Reverse** | Disengage lateral. No steering actuation outside Drive |
 
 ## Installation
-Next, refer to the sunnypilot community forum for [installation instructions](https://community.sunnypilot.ai/t/read-before-installing-sunnypilot/254), as well as a complete list of [Recommended Branch Installations](https://community.sunnypilot.ai/t/recommended-branch-installations/235).
 
-## 🎆 Pull Requests
-We welcome both pull requests and issues on GitHub. Bug fixes are encouraged.
+Supported hardware: **comma 3X** and **comma four**, in a Rivian R1T with the angle harness.
 
-Pull requests should be against the most current `master` branch.
+1. On the device: **Settings → Software → Uninstall**. The device reboots into setup.
+2. Choose **Custom Software** and enter:
+   ```
+   caleb-collar/r1t-xnor-adventure
+   ```
+   (equivalent to `https://installer.comma.ai/caleb-collar/r1t-xnor-adventure`)
+3. On first boot the panda is reflashed with this branch's firmware.
 
-## 📊 User Data
+**Rollback:** repeat the steps with `xnor-tech/rx-dev`. The panda firmware is restored automatically.
 
-By default, sunnypilot uploads the driving data to comma servers. You can also access your data through [comma connect](https://connect.comma.ai/).
+> [!IMPORTANT]
+> Installed devices auto-update from `r1t-xnor-adventure`. Only verified changes are promoted to that branch.
 
-sunnypilot is open source software. The user is free to disable data collection if they wish to do so.
+## Repository Layout & Remotes
 
-sunnypilot logs the road-facing camera, CAN, GPS, IMU, magnetometer, thermal sensors, crashes, and operating system logs.
-The driver-facing camera and microphone are only logged if you explicitly opt-in in settings.
+This branch is rooted on xnor's **prebuilt** `rx-dev` tree. Libraries are vendored rather than submodules
+(`opendbc_repo/`, `panda/`, `msgq_repo/`, …), and compiled aarch64 binaries are committed so the device skips the build.
+
+| Remote | Repository | Purpose |
+|---|---|---|
+| `origin` | `caleb-collar/openpilot` | This fork |
+| `upstream` | `xnor-tech/openpilot` | Base (`rx-dev`). Push disabled |
+| `adventure` | `AdventurePilotDev/openpilot` | Feature reference (`stg-a`). Push disabled |
+
+Key Rivian code:
+* `opendbc_repo/opendbc/car/rivian/`: car state, controller, xnor angle smoothing (`ext_controller.py`)
+* `opendbc_repo/opendbc/sunnypilot/car/rivian/`: stalk parsing, MADS car controller
+* `opendbc_repo/opendbc/safety/modes/rivian.h`: panda safety mode
+* `openpilot/sunnypilot/selfdrive/car/car_specific.py`, `openpilot/sunnypilot/mads/`: MADS event handling
+
+## Development
+
+```bash
+git config core.hooksPath .githooks   # Conventional Commits hook
+```
+
+* **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), enforced locally and in CI. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+* **Changelog:** [Keep a Changelog](https://keepachangelog.com/) in [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md). The root `CHANGELOG.md` is upstream sunnypilot's. The device parses it for release notes, so leave it untouched.
+* **Plan, constraints, verification matrix, upstream resync workflow:** [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md).
+
+## Credits
+
+* [comma.ai openpilot](https://github.com/commaai/openpilot): the foundation
+* [sunnypilot](https://github.com/sunnypilot/sunnypilot): MADS and the fork this builds on
+* [xnor-tech](https://github.com/xnor-tech/openpilot): Rivian angle harness support and steering smoothing
+* [AdventurePilot](https://github.com/AdventurePilotDev/openpilot): Rivian gear-stalk MADS design
+* [lukasloetkolben](https://github.com/lukasloetkolben): original Rivian R1S/R1T port
+
+## User Data
+
+By default, openpilot/sunnypilot uploads driving data to comma servers. You can access your data through [comma connect](https://connect.comma.ai/). You are free to disable data collection.
+
+openpilot logs the road-facing camera, CAN, GPS, IMU, magnetometer, thermal sensors, crashes, and operating system logs.
+The driver-facing camera and microphone are only logged if you explicitly opt in in settings.
 
 By using this software, you understand that use of this software or its related services will generate certain types of user data, which may be logged and stored at the sole discretion of comma. By accepting this agreement, you grant an irrevocable, perpetual, worldwide right to comma for the use of this data.
 
 ## Licensing
 
-sunnypilot is released under the [MIT License](LICENSE). This repository includes original work as well as significant portions of code derived from [openpilot by comma.ai](https://github.com/commaai/openpilot), which is also released under the MIT license with additional disclaimers.
-
-The original openpilot license notice, including comma.ai’s indemnification and alpha software disclaimer, is reproduced below as required:
+This fork is released under the [MIT License](LICENSE), like sunnypilot and openpilot, from which it derives. The original openpilot license notice, including comma.ai's indemnification and alpha software disclaimer, is reproduced below as required:
 
 > openpilot is released under the MIT license. Some parts of the software are released under other licenses as specified.
 >
-> Any user of this software shall indemnify and hold harmless Comma.ai, Inc. and its directors, officers, employees, agents, stockholders, affiliates, subcontractors and customers from and against all allegations, claims, actions, suits, demands, damages, liabilities, obligations, losses, settlements, judgments, costs and expenses (including without limitation attorneys’ fees and costs) which arise out of, relate to or result from any use of this software by user.
+> Any user of this software shall indemnify and hold harmless Comma.ai, Inc. and its directors, officers, employees, agents, stockholders, affiliates, subcontractors and customers from and against all allegations, claims, actions, suits, demands, damages, liabilities, obligations, losses, settlements, judgments, costs and expenses (including without limitation attorneys' fees and costs) which arise out of, relate to or result from any use of this software by user.
 >
 > **THIS IS ALPHA QUALITY SOFTWARE FOR RESEARCH PURPOSES ONLY. THIS IS NOT A PRODUCT.
 > YOU ARE RESPONSIBLE FOR COMPLYING WITH LOCAL LAWS AND REGULATIONS.
 > NO WARRANTY EXPRESSED OR IMPLIED.**
 
-For full license terms, please see the [`LICENSE`](LICENSE) file.
-
-## 💰 Support sunnypilot
-If you find any of the features useful, consider becoming a [sponsor on GitHub](https://github.com/sponsors/sunnyhaibin) to support future feature development and improvements.
-
-
-By becoming a sponsor, you will gain access to exclusive content, early access to new features, and the opportunity to directly influence the project's development.
-
-
-<h3>GitHub Sponsor</h3>
-
-<a href="https://github.com/sponsors/sunnyhaibin">
-  <img src="https://user-images.githubusercontent.com/47793918/244135584-9800acbd-69fd-4b2b-bec9-e5fa2d85c817.png" alt="Become a Sponsor" width="300" style="max-width: 100%; height: auto;">
-</a>
-<br>
-
-<h3>PayPal</h3>
-
-<a href="https://paypal.me/sunnyhaibin0850" target="_blank">
-<img src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" alt="PayPal this" title="PayPal - The safer, easier way to pay online!" border="0" />
-</a>
-<br></br>
-
-Your continuous love and support are greatly appreciated! Enjoy 🥰
-
-<span>-</span> Jason, Founder of sunnypilot
+For full license terms, see the [`LICENSE`](LICENSE) and [`LICENSE.md`](LICENSE.md) files.
