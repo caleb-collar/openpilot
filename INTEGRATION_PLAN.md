@@ -18,7 +18,7 @@
 
 * **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). Phase 1 steps 1–4 and 6: sudo-free toolchain, baseline safety gate green, firmware reproduced from source, CI jobs for both (see [Phase 1 baseline](#phase-1-baseline-results-2026-10-07)). Work happens on `r1t-dev`. The device branch `r1t-xnor-adventure` is fast-forwarded from it only after review.
 * **Blocked on the owner:** Phase 1 step 5. Supply **at least 3 rx-dev angle-harness routes** (comma connect route IDs, made public, or downloaded `rlog`s) that contain UP_1/UP_2 stalk presses, Park/Reverse shifts, and ACC on/off. A stock upstream route is not representative (§0 #18).
-* **Next:** Phase 2. Run `git fetch adventure stg-a-src` and read the source commits in §2.6 first. Resolve R7/S6 before porting S1.
+* **Next:** Phase 2 (v0.1 Python Port). Run `git fetch adventure stg-a-src` and read the source commits in §2.6 first. We will implement the fail-safe Python-only disengage logic first.
 * **Setup for a fresh clone:** install `uv` (see `fork/README.md`), then `fork/scripts/safety_tests.sh --quick` and `fork/scripts/build_firmware.sh --verify`.
 
 ## Decision Log
@@ -236,31 +236,36 @@ Tree: `r1t-xnor-adventure` @ `8321693ab` (rx-dev `8a627abb0` + docs/CI only). Ho
 > `lateral.h` angle-limit survivors (#153/#156) sit on code the Rivian angle path may use. They are upstream's, not
 > introduced here, and are out of scope (I4 only forbids loosening). Revisit if Phase 2 touches `lateral.h`.
 
-### Phase 2: Safety Layer Port (C)
-1. Apply S1–S4 and S7 to `rivian.h` / `mads.h`. Do not apply S5 or S8. Resolve S6.
-2. Tests in `test_rivian.py` (T1):
+### Phase 2: Python Port (v0.1 Staged Rollout)
+This phase implements **only** the fail-safe disengage logic in Python. It does not touch the Panda firmware.
+1. Create branch `feat/v0.1-python-disengage` from `r1t-dev`.
+2. Apply P1–P4, P6, P7, P9, P10. Preserve I1 (diff `carstate.py`, `ext_controller.py`, `carcontroller.py` against `rx-dev`. The expected delta is empty. `check_invariants.sh` enforces this).
+3. Hard guard (CI-checkable): no new `Params` keys and no cereal enums outside what `rx-dev` defines. File-level guards already exist in `check_invariants.sh`. Add a key-usage scan for fork-touched Python here.
+4. Keep `opendbc` importable without `openpilot` (lazy imports only).
+5. Port T2 tests. Add opendbc-level unit tests for the stalk edge detector (lookahead, UP_1→UP_2, DOWN→UP_1, ACC/DISENGAGE suppression).
+6. **Exclude** the UP_1 lateral toggle logic from `mads.py`/`carstate_ext.py` for now, as it requires a Panda firmware update (which comes in v0.2) to prevent EPAS fault latches from counter gaps.
+7. Commits, e.g.: `feat(rivian): map gear-stalk UP_2 and shifting to MADS disengage`, `feat(mads): unlock full steering modes for rivian`, `fix(rivian): gate lateral actuation to drive gear`.
+
+### Phase 3: Safety Layer Port (C) (v0.2 Staged Rollout)
+This phase implements the Panda firmware support for the UP_1 toggle, allowing Python and Panda to agree on lateral engagement.
+1. Create branch `feat/v0.2-panda-engage` from `feat/v0.1-python-disengage`.
+2. Apply S1–S4 and S7 to `rivian.h` / `mads.h`. Do not apply S5 or S8. Resolve S6.
+3. Tests in `test_rivian.py` (T1):
    * `0x162` checksum/counter validation. A bad checksum or counter must not count as a press.
    * UP_1 sets `mads_button_press` only while `!cruise_engaged_prev`.
    * UP_2 never force-exits and never grants lateral.
    * `ACM_Status` ticks MADS state.
    * The heartbeat-mismatch counter resets on exit.
    * **Regression guard:** steering limits equal rx-dev values.
-3. Run `fork/scripts/safety_tests.sh` (MISRA, mutation, and coverage). 100% of new lines must be covered, and mutation must add no survivors.
-4. Replay (Phase 1.5 routes) with the new safety. Zero unexpected `controls_allowed` drops. If `0x162` bursts or lag trip the RX check, switch to `ignore_frequency_check` and document why.
-5. Commit: `feat(safety): track rivian gear-stalk for MADS lateral`, `fix(safety): reset MADS heartbeat mismatch counter on exit`.
+4. Run `fork/scripts/safety_tests.sh` (MISRA, mutation, and coverage). 100% of new lines must be covered, and mutation must add no survivors.
+5. Replay (Phase 1.5 routes) with the new safety. Zero unexpected `controls_allowed` drops. If `0x162` bursts or lag trip the RX check, switch to `ignore_frequency_check` and document why.
+6. Commit: `feat(safety): track rivian gear-stalk for MADS lateral`, `fix(safety): reset MADS heartbeat mismatch counter on exit`.
+7. Introduce the UP_1 lateral toggle logic back into the Python files (`carstate_ext.py`).
 
 > [!IMPORTANT]
-> Do Phases 2–4 on a `feat/` branch (CI `firmware` is advisory there). Push to `r1t-dev` only together with the final
-> `build(panda)` commit. On `r1t-dev`, the device branch, and PRs, CI fails if committed firmware doesn't match the safety sources.
+> Push to `r1t-dev` only together with the final `build(panda)` commit. On `r1t-dev`, the device branch, and PRs, CI fails if committed firmware doesn't match the safety sources.
 
-### Phase 3: Python Port
-1. Apply P1–P4, P6, P7, P9, P10. Preserve I1 (diff `carstate.py`, `ext_controller.py`, `carcontroller.py` against `rx-dev`. The expected delta is empty. `check_invariants.sh` enforces this).
-2. Hard guard (CI-checkable): no new `Params` keys and no cereal enums outside what `rx-dev` defines. File-level guards already exist in `check_invariants.sh`. Add a key-usage scan for fork-touched Python here.
-3. Keep `opendbc` importable without `openpilot` (lazy imports only).
-4. Port T2 tests. Add opendbc-level unit tests for the stalk edge detector (lookahead, UP_1→UP_2, DOWN→UP_1, ACC/DISENGAGE suppression).
-5. Commits, e.g.: `feat(rivian): map gear-stalk UP_1/UP_2 to MADS toggle and disengage`, `feat(mads): unlock full steering modes for rivian`, `fix(rivian): gate lateral actuation to drive gear`.
-
-### Phase 4: Firmware Rebuild & Artifact Commit
+### Phase 4: Firmware Rebuild & Artifact Commit (v0.2)
 1. With all source commits in place and a clean tree: `fork/scripts/build_firmware.sh --install`. This builds from `HEAD` (debug cert only, and it refuses `RELEASE`/`CERT`), then copies the artifacts into `panda/board/obj/`.
 2. Commit the binaries as **one dedicated, final commit**: `build(panda): rebuild firmware with rivian stalk MADS safety`. Put the toolchain version, the source commit SHA (= gitversion), and `SHA256SUMS` in the commit body.
 3. Confirm `fork/scripts/build_firmware.sh --verify` passes on the new `HEAD`. CI enforces this too.
