@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Conventional Commits validator (https://www.conventionalcommits.org/en/v1.0.0/)
+#
+# Enable per clone:   git config core.hooksPath .githooks
+# Check a message:    .githooks/commit-msg <file>      (also used by CI)
+#
+# Header format:  <type>(<optional scope>)<optional !>: <description>
+set -euo pipefail
+
+msg_file="${1:?usage: commit-msg <message-file>}"
+
+# First non-comment, non-blank line is the header.
+header="$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -n1 || true)"
+
+types='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+pattern="^(${types})(\([a-z0-9][a-z0-9._/-]*\))?!?: [^ ].*$"
+
+# Git-generated headers that are allowed through untouched.
+if [[ "$header" =~ ^(Merge|Revert\ \"|fixup!\ |squash!\ |amend!\ ) ]]; then
+  exit 0
+fi
+
+fail() {
+  {
+    echo "✖ commit message does not follow Conventional Commits"
+    echo "    header: ${header:-<empty>}"
+    echo "    reason: $1"
+    echo
+    echo "  expected: <type>(<scope>)!: <description>"
+    echo "  types:    ${types//|/ }"
+    echo "  example:  feat(rivian): map gear-stalk UP_2 to MADS disengage"
+    echo "  see CONTRIBUTING.md"
+  } >&2
+  exit 1
+}
+
+[[ -n "$header" ]] || fail "empty message"
+[[ "$header" =~ $pattern ]] || fail "header must match <type>(<scope>)!: <description> (lowercase type/scope)"
+(( ${#header} <= 100 )) || fail "header is ${#header} chars (max 100)"
+[[ "$header" != *. ]] || fail "header must not end with a period"
+
+# Body, if present, must be separated from the header by a blank line.
+second_line="$(grep -v '^#' "$msg_file" | sed -n '2p')"
+[[ -z "${second_line//[[:space:]]/}" ]] || fail "leave a blank line between header and body"
+
+exit 0
