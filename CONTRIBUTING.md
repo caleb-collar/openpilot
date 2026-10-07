@@ -15,6 +15,19 @@ git remote set-url --push upstream DISABLED             # never push to the sour
 git remote set-url --push adventure DISABLED
 ```
 
+## Local checks (same scripts as CI)
+
+Install [`uv`](https://docs.astral.sh/uv/) (checksum-verified steps in [`fork/README.md`](fork/README.md)). No sudo is needed.
+
+```bash
+fork/scripts/check_invariants.sh        # prebuilt-branch hard rules + I1 angle-stack files unchanged
+fork/scripts/safety_tests.sh            # panda safety: tests, 100% coverage, MISRA, mutation (~1.5 min)
+fork/scripts/safety_tests.sh --quick    # tests + coverage only (~35 s)
+fork/scripts/build_firmware.sh --verify # committed panda firmware == build from committed sources
+```
+
+Run the full safety gate before pushing any change under `opendbc_repo/opendbc/safety/`.
+
 ## Commit messages: Conventional Commits 1.0.0
 
 ```
@@ -39,7 +52,7 @@ git remote set-url --push adventure DISABLED
 | `chore` | Maintenance, including upstream resyncs (`chore(sync): ...`) |
 | `revert` | Reverting a previous commit |
 
-**Scopes** (lowercase): `rivian`, `safety`, `mads`, `panda`, `sync`, `docs`, `ci`, `tests`, `deps`.
+**Scopes** (lowercase): `rivian`, `safety`, `mads`, `panda`, `sync`, `docs`, `ci`, `tests`, `deps`, `tools` (`fork/` scripts).
 
 Rules (enforced by [`.githooks/commit-msg`](.githooks/commit-msg) and CI):
 * The header matches `type(scope)!: description`, is 100 characters or fewer, and does not end with a period.

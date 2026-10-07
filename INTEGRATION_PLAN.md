@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Plan revision | 2.1 (2026-10-07) |
+| Plan revision | 2.2 (2026-10-07) |
 | Target | `caleb-collar/openpilot` @ `r1t-xnor-adventure` |
 | Upstream base | `xnor-tech/openpilot` @ `rx-dev` → `8a627abb0` ("openpilot rx-dev prebuilt") |
 | Upstream source (reference) | `xnor-tech/openpilot` @ `rx-new-src` → `406a1bc09` ("Rivian: angle control"). Its Rivian, safety, and MADS code matches `rx-dev` except for one MISRA suppression comment in `mads.h` |
@@ -12,12 +12,14 @@
 | Feature source (**primary port reference**) | `AdventurePilotDev/openpilot` @ `stg-a-src` → `80886ced` (full history, focused commits; see §2.6) |
 | Fork changelog | [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md) (Keep a Changelog + SemVer) |
 | Conventions | [`CONTRIBUTING.md`](CONTRIBUTING.md) (Conventional Commits) |
+| Fork tooling | [`fork/README.md`](fork/README.md) (safety gate, firmware build/verify, invariant checks) |
 
 ## Status & Next Step (for a fresh session)
 
-* **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). The branch is pushed and is the fork's default. CI is green. The installer endpoint already returns a valid aarch64 installer for the fork.
-* **Next:** Phase 1 (toolchain + baseline, no source changes). It needs host packages installed with sudo (§Phase 1) and Rivian routes from the owner.
-* **Before Phase 2:** `git fetch adventure stg-a-src` and read the source commits listed in §2.6.
+* **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). Phase 1 steps 1–4 and 6: sudo-free toolchain, baseline safety gate green, firmware reproduced from source, CI jobs for both (see [Phase 1 baseline](#phase-1-baseline-results-2026-10-07)). Work happens on `r1t-dev`. The device branch `r1t-xnor-adventure` is fast-forwarded from it only after review.
+* **Blocked on the owner:** Phase 1 step 5. Supply **at least 3 rx-dev angle-harness routes** (comma connect route IDs, made public, or downloaded `rlog`s) that contain UP_1/UP_2 stalk presses, Park/Reverse shifts, and ACC on/off. A stock upstream route is not representative (§0 #18).
+* **Next:** Phase 2. Run `git fetch adventure stg-a-src` and read the source commits in §2.6 first. Resolve R7/S6 before porting S1.
+* **Setup for a fresh clone:** install `uv` (see `fork/README.md`), then `fork/scripts/safety_tests.sh --quick` and `fork/scripts/build_firmware.sh --verify`.
 
 ## Decision Log
 
@@ -51,6 +53,9 @@
 | 13 | `origin` = xnor-tech | — | `origin` = caleb-collar, `upstream` = xnor-tech, `adventure` = AdventurePilotDev. Push is disabled on `upstream` and `adventure` |
 | 14 | (rev 2) Only prebuilt trees are available | Both sources publish **history-bearing source branches**: `adventure/stg-a-src` and `upstream/rx-new-src` | Use the source commits as the primary port reference (D6, §2.6) |
 | 15 | (rev 2) `libsafety` is built with scons | `libsafety_py.py` compiles `safety.c` with **gcc through cffi at import time**. scons is only needed for panda firmware | Corrected §2.2 and Phase 1 |
+| 16 | (rev 2.1) Phase 1 needs sudo for `cppcheck`, `scons`, and `gcc-arm-none-eabi` | All three ship as **hash-locked wheels** (`opendbc_repo/uv.lock` for cppcheck, root `uv.lock` for `scons==4.10.1` and `comma-deps-gcc-arm-none-eabi==13.2.1.post98`). Only `uv` is needed, installed per-user | No sudo. `fork/scripts/fw_requirements.py` derives the toolchain pins from `uv.lock` |
+| 17 | (rev 2.1) Firmware byte-identity is not expected (toolchain drift) | The committed ELFs were built with **Arm GNU Toolchain 13.2.rel1**, the same compiler the wheel ships. A rebuild is **byte-identical except for the 8-char SHA in `gitversion`**, and the debug signature is deterministic | CI now proves committed firmware matches committed sources (`build_firmware.sh --verify`). Phase 4 becomes verifiable |
+| 18 | (rev 2.1) Any Rivian route works for replay | Public CI route `bc095dc92e101734/000000db--ee9fe46e57` (stock upstream, torque control) replays with 0 RX errors but **251 blocked `0x120`** TX against rx-dev safety. It was recorded with different software | Replay acceptance must use **rx-dev angle-harness routes** from the owner. The public route only proves the replay pipeline works on PC |
 
 ---
 
@@ -202,17 +207,34 @@ Discovery command: `git log --oneline adventure/stg-a-src -- <path>`. Use `git l
 - [x] CI: `.github/workflows/fork-ci.yml` (commit lint and Python checks on fork-touched files). Actions enabled on the fork. `r1t-xnor-adventure` set as the default branch.
 
 ### Phase 1: Toolchain & Baseline (no source changes)
-1. Install host tools:
-   * Safety tests: `uv`, `gcc` (cffi builds `libsafety`), `cppcheck` (MISRA, run by `safety/tests/misra`).
-   * Firmware: `scons`, `gcc-arm-none-eabi` (match the version `panda/setup.sh` installs).
-   * The host Python is 3.14, but the repo pins 3.12 (`.python-version`). Let `uv` provide 3.12.
-2. Create the Python 3.12 env for opendbc: `cd opendbc_repo && ./setup.sh` (or `uv sync`).
-3. **Baseline safety tests** on the unmodified tree: build `libsafety`, then run `test_rivian.py`, `test_defaults.py`, and the MADS common tests. Record the results.
-4. **Baseline firmware build** on the unmodified tree (`CERT` unset → debug cert). Confirm the build succeeds and record its size and gitversion next to the committed binary. Byte-identity is not expected (toolchain drift).
-5. **Collect replay data**: export Rivian routes from comma connect that contain UP_1/UP_2 presses, Park/Reverse shifts, and ACC on/off. Confirm `opendbc/safety/tests/safety_replay` runs on them with the baseline safety.
-6. Add CI jobs for (3) and (4) once they run locally (`ci:` commit).
+1. [x] Install host tools. **No sudo** (§0 #16): host `gcc`/`gcov` plus a checksum-verified per-user `uv` (`fork/README.md`). `uv` provides Python 3.12, `cppcheck` (opendbc lock), and `scons` + Arm GNU Toolchain 13.2.rel1 (root lock, via `fork/scripts/fw_requirements.py`).
+2. [x] Python 3.12 env for opendbc: `fork/scripts/safety_tests.sh` runs `uv sync --locked` into `opendbc_repo/.venv` (gitignored). `--locked` keeps `uv.lock` untouched.
+3. [x] **Baseline safety gate** on the unmodified tree: `fork/scripts/safety_tests.sh` (all modes, coverage, MISRA, mutation).
+4. [x] **Baseline firmware build** on the unmodified tree: `fork/scripts/build_firmware.sh --verify` (isolated sparse worktree, debug cert only). The result is reproducible (§0 #17).
+5. [ ] **Collect replay data** (owner): rx-dev angle-harness routes with UP_1/UP_2 presses, Park/Reverse shifts, and ACC on/off. Run `safety_replay` on them with the baseline safety (command in `fork/README.md`). The PC replay pipeline is already validated on a public route (§0 #18).
+6. [x] CI jobs: `invariants`, `safety`, `firmware` in `fork-ci.yml`, calling the same scripts.
 
-Exit criteria: baseline tests green, firmware builds reproducibly, at least 3 replay routes available.
+Exit criteria: baseline tests green ✅, firmware builds reproducibly ✅, at least 3 replay routes available ⏳.
+
+#### Phase 1 baseline results (2026-10-07)
+
+Tree: `r1t-xnor-adventure` @ `8321693ab` (rx-dev `8a627abb0` + docs/CI only). Host: Ubuntu 26.04, gcc 15.2, 16 cores.
+
+| Check | Result |
+|---|---|
+| Safety unit tests (all modes) | 8433 run, **OK** (915 skipped). `test_rivian` + `test_defaults`: 179 run, OK (20 skipped) |
+| Line coverage | **100%** (2684/2684). `modes/rivian.h` 74/74, `sunnypilot/mads.h` 103/103 |
+| MISRA C:2012 | **Pass** (268/386 active checkers) |
+| Mutation | 3388 mutants, 3385 killed. **3 survivors, all upstream's `known_survivors`** in `lateral.h:190/220/221` (rt-window and angle-delta boundaries). Script exit 0 |
+| Firmware toolchain | Committed ELFs and the rebuild both report `Arm GNU Toolchain 13.2.rel1 (Build arm-13.7) 13.2.1 20231009` |
+| Firmware rebuild | `panda_h7` / `panda_jungle_h7` / `body_h7` `main.bin` + bootstubs **identical modulo gitversion** (committed `DEV-ff8d7d84-DEBUG`). `*.bin.signed` == debug-sign(committed `main.bin`). Section sizes identical. A negative test (`rivian.h` `max_torque` 350→349 in a dangling commit) is caught as `DIFFERS` |
+| Signed image sizes | `panda_h7.bin.signed` 103216 B, `panda_jungle_h7.bin.signed` 96036 B, `body_h7.bin.signed` 102620 B |
+| Safety replay (public stock route, seg 2) | Pipeline works on PC. 399014 RX / 0 invalid. 7199 TX / 251 blocked (`0x120`). Not representative (§0 #18) |
+| Invariants (`check_invariants.sh`) | All pass. A negative test (edits to `CHANGELOG.md` / `ext_controller.py` / launcher mode) fails as expected |
+
+> [!NOTE]
+> `lateral.h` angle-limit survivors (#153/#156) sit on code the Rivian angle path may use. They are upstream's, not
+> introduced here, and are out of scope (I4 only forbids loosening). Revisit if Phase 2 touches `lateral.h`.
 
 ### Phase 2: Safety Layer Port (C)
 1. Apply S1–S4 and S7 to `rivian.h` / `mads.h`. Do not apply S5 or S8. Resolve S6.
@@ -223,25 +245,30 @@ Exit criteria: baseline tests green, firmware builds reproducibly, at least 3 re
    * `ACM_Status` ticks MADS state.
    * The heartbeat-mismatch counter resets on exit.
    * **Regression guard:** steering limits equal rx-dev values.
-3. Run MISRA (`safety/tests/misra`), mutation tests (`safety/tests/mutation.py`), and coverage. 100% of new lines must be covered.
+3. Run `fork/scripts/safety_tests.sh` (MISRA, mutation, and coverage). 100% of new lines must be covered, and mutation must add no survivors.
 4. Replay (Phase 1.5 routes) with the new safety. Zero unexpected `controls_allowed` drops. If `0x162` bursts or lag trip the RX check, switch to `ignore_frequency_check` and document why.
 5. Commit: `feat(safety): track rivian gear-stalk for MADS lateral`, `fix(safety): reset MADS heartbeat mismatch counter on exit`.
 
+> [!IMPORTANT]
+> Do Phases 2–4 on a `feat/` branch (CI `firmware` is advisory there). Push to `r1t-dev` only together with the final
+> `build(panda)` commit. On `r1t-dev`, the device branch, and PRs, CI fails if committed firmware doesn't match the safety sources.
+
 ### Phase 3: Python Port
-1. Apply P1–P4, P6, P7, P9, P10. Preserve I1 (diff `carstate.py`, `ext_controller.py`, `carcontroller.py` against `rx-dev`. The expected delta is empty).
-2. Hard guard (CI-checkable): no new `Params` keys and no cereal enums outside what `rx-dev` defines.
+1. Apply P1–P4, P6, P7, P9, P10. Preserve I1 (diff `carstate.py`, `ext_controller.py`, `carcontroller.py` against `rx-dev`. The expected delta is empty. `check_invariants.sh` enforces this).
+2. Hard guard (CI-checkable): no new `Params` keys and no cereal enums outside what `rx-dev` defines. File-level guards already exist in `check_invariants.sh`. Add a key-usage scan for fork-touched Python here.
 3. Keep `opendbc` importable without `openpilot` (lazy imports only).
 4. Port T2 tests. Add opendbc-level unit tests for the stalk edge detector (lookahead, UP_1→UP_2, DOWN→UP_1, ACC/DISENGAGE suppression).
 5. Commits, e.g.: `feat(rivian): map gear-stalk UP_1/UP_2 to MADS toggle and disengage`, `feat(mads): unlock full steering modes for rivian`, `fix(rivian): gate lateral actuation to drive gear`.
 
 ### Phase 4: Firmware Rebuild & Artifact Commit
-1. Rebuild `panda/board/obj/*` from the modified sources with the debug cert.
-2. Commit the binaries as **one dedicated, final commit**: `build(panda): rebuild firmware with rivian stalk MADS safety`. Put the toolchain version, source tree hash, and gitversion in the commit body.
-3. This commit is always last on the branch. Resyncs drop and regenerate it (Phase 8).
+1. With all source commits in place and a clean tree: `fork/scripts/build_firmware.sh --install`. This builds from `HEAD` (debug cert only, and it refuses `RELEASE`/`CERT`), then copies the artifacts into `panda/board/obj/`.
+2. Commit the binaries as **one dedicated, final commit**: `build(panda): rebuild firmware with rivian stalk MADS safety`. Put the toolchain version, the source commit SHA (= gitversion), and `SHA256SUMS` in the commit body.
+3. Confirm `fork/scripts/build_firmware.sh --verify` passes on the new `HEAD`. CI enforces this too.
+4. This commit is always last on the branch. Resyncs drop and regenerate it (Phase 8).
 
 ### Phase 5: Verification Matrix
 
-**PC (CI where possible):** commit lint · `py_compile` + `ruff` on touched files · safety tests · MISRA · mutation · coverage · safety replay.
+**PC (CI where possible):** commit lint · `py_compile` + `ruff` on touched files · invariants · safety tests · MISRA · mutation · coverage · firmware reproducibility (all in CI) · safety replay (local, owner routes).
 
 **Device (SSH, `/data/openpilot`):** `pytest` T2 suites and `openpilot/sunnypilot/mads/tests`.
 
@@ -284,7 +311,7 @@ old_base=$(git rev-list --max-parents=0 r1t-xnor-adventure)
 git switch -c sync/rx-dev-$(date +%Y%m%d) r1t-xnor-adventure
 git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda) commit as "drop"; Phase 4 regenerates it
 ```
-1. Resolve source conflicts. **Never resolve binary conflicts by picking a side.** Regenerate firmware (Phase 4).
+1. Resolve source conflicts. **Never resolve binary conflicts by picking a side.** Regenerate firmware (Phase 4: `build_firmware.sh --install`, then `--verify`). Before rebasing, run `build_firmware.sh --ref upstream/rx-dev --verify` to confirm the new upstream firmware is itself reproducible with the pinned toolchain.
 2. Re-diff the I1 files against the new `rx-dev`. Re-run the full Phase 5 matrix.
 3. Add a `Changed: rebased onto xnor-tech/rx-dev <sha>` entry to `FORK_CHANGELOG.md`.
 4. Promote with `git push --force-with-lease origin sync/...:r1t-xnor-adventure`. On-device `updated` handles force-pushed branches (fetch + hard reset).
@@ -307,7 +334,7 @@ git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda)
 |---|---|---|
 | R1 | The `0x162` RX check trips on known lag/burst, causing spurious `controls_allowed` drops | Replay validation (Phase 2.4). Fall back to `ignore_frequency_check` |
 | R2 | Panda/Python MADS desync (stg-a hit this) | S2 `!cruise_engaged_prev` gate, S7 reset, B5/B8 acceptance |
-| R3 | The firmware toolchain differs from xnor's | Pin the arm-gcc version from `panda/setup.sh`. Baseline build in Phase 1 |
+| R3 | The firmware toolchain differs from xnor's | **Mitigated (Phase 1).** The pinned wheel is the same Arm GNU Toolchain 13.2.rel1 that xnor used, and the rebuild is byte-identical modulo gitversion. CI `firmware` re-proves this on every push. Re-check after resyncs that bump `uv.lock` |
 | R4 | Two-frame `lkasDisable` hack depends on MADS state-machine ordering | Unit test B6 on device. Revisit the general `state.py` fix upstream with sunnypilot |
 | R5 | P4 seeding changes a user setting | Only on a never-driven device. Documented in the changelog |
 | R6 | An xnor resync changes the angle stack under us | Phase 8 step 2 (I1 re-diff) |
@@ -322,7 +349,8 @@ git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda)
 - [x] SSH + `gh` authenticated as `caleb-collar`
 - [x] Public fork `caleb-collar/openpilot` exists. Remotes configured, upstream push disabled
 - [x] Conventional Commits hook + CI, README, FORK_CHANGELOG, CONTRIBUTING committed
-- [ ] Phase 1 baseline: safety tests green, firmware builds, replay routes collected
+- [x] Phase 1 baseline: safety gate green (tests, 100% coverage, MISRA, mutation), firmware reproducible from source, CI jobs added
+- [ ] Phase 1 replay routes collected (≥3 rx-dev angle-harness routes from the owner)
 - [ ] Safety port S1–S4, S7 with tests, MISRA, mutation, 100% new-line coverage
 - [ ] Python port P1–P4, P6, P7, P9, P10 with tests. I1 files unchanged vs `rx-dev`
 - [ ] No new param keys / cereal enums

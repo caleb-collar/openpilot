@@ -67,6 +67,7 @@ git config core.hooksPath .githooks   # Conventional Commits hook
 ```
 
 * **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), enforced locally and in CI. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+* **Checks:** [`fork/`](fork/README.md) holds the sudo-free safety gate (tests, 100% coverage, MISRA, mutation), a reproducible panda firmware build and verify step, and the prebuilt-branch invariant checks. CI runs the same scripts.
 * **Changelog:** [Keep a Changelog](https://keepachangelog.com/) in [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md). The root `CHANGELOG.md` is upstream sunnypilot's. The device parses it for release notes, so leave it untouched.
 * **Plan, constraints, verification matrix, upstream resync workflow:** [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md).
 
