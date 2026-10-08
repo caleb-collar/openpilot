@@ -25,6 +25,7 @@ TESTS=(
   openpilot/sunnypilot/selfdrive/car/tests/test_rivian_gear_disengage_sp.py
   openpilot/sunnypilot/selfdrive/car/tests/test_rivian_mads_steering_default_sp.py
   openpilot/sunnypilot/selfdrive/car/tests/test_rivian_b5b_sp.py
+  openpilot/sunnypilot/selfdrive/car/tests/test_rivian_vehicle_gate_sp.py
   openpilot/sunnypilot/mads/tests  # upstream MADS tests: cover the helpers.py change
 )
 

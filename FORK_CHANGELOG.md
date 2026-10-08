@@ -17,6 +17,9 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - Added "GaryPilot" retro 1980s chromed gradient pixel art badge to the bottom center of the Outrun screensaver (`ScreenSaverSP`), supporting both Comma 4 and Comma 3X resolutions.
 - Updated UI home screen, settings toggles, startup alerts, device info, and setup wizards to reflect "GaryPilot" branding across Comma 4 and Comma 3X layouts.
 - Migrated primary production branch and installation target to `GaryPilot`.
+- Added first-boot Rivian R1 vehicle verification screen to the onboarding setup flow on both Comma 4 (`mici`) and Comma 3X, requiring explicit confirmation that the device is installed in a supported Rivian R1 with XNOR angle harness before proceeding, with a one-tap "Not an R1 / Uninstall" option to revert the device.
+- Bumped `terms_version_sp` to `2.0` in `openpilot/common/version.py`, ensuring `hardwared` and UI gate onroad startup until vehicle verification is completed.
+- Added automated runtime vehicle safety lockout (`enforce_vehicle_safety_gate` in `openpilot/selfdrive/car/helpers.py` called by `card.py`): non-Rivian vehicle CAN fingerprints permanently lock GaryPilot into passive dashcam-only mode (`CP.passive = True`, `CP.dashcamOnly = True`) and configure panda hardware safety to `SafetyModel.noOutput`, preventing any CAN actuation packets from ever being transmitted to non-Rivian vehicles.
 
 ## [0.1.0] - 2026-10-07
 

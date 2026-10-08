@@ -20,7 +20,7 @@ from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseHelper
-from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
+from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp, enforce_vehicle_safety_gate
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
@@ -131,12 +131,7 @@ class Car:
     self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")
 
     openpilot_enabled_toggle = self.params.get_bool("OpenpilotEnabledToggle")
-    controller_available = self.CI.CC is not None and openpilot_enabled_toggle and not self.CP.dashcamOnly
-    self.CP.passive = not controller_available or self.CP.dashcamOnly
-    if self.CP.passive:
-      safety_config = structs.CarParams.SafetyConfig()
-      safety_config.safetyModel = structs.CarParams.SafetyModel.noOutput
-      self.CP.safetyConfigs = [safety_config]
+    controller_available = enforce_vehicle_safety_gate(self.CP, self.CI.CC, openpilot_enabled_toggle)
 
     if self.CP.secOcRequired:
       # Copy user key if available

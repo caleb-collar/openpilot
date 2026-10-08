@@ -63,7 +63,7 @@ class TrainingGuidePreDMTutorial(NavScroller):
       GreyBigButton("driver monitoring\ncheck", "scroll to continue",
                     gui_app.texture("icons_mici/setup/green_dm.png", 64, 64)),
       GreyBigButton("", "Next, we'll check if comma four can detect the driver properly."),
-      GreyBigButton("", "sunnypilot uses the cabin camera to check if the driver is distracted."),
+      GreyBigButton("", "GaryPilot uses the cabin camera to check if the driver is distracted."),
       GreyBigButton("", "If it does not have a clear view of the driver, unplug and remount before continuing."),
       continue_button,
     ])
@@ -294,6 +294,55 @@ class QRCodeWidget(Widget):
       rl.unload_texture(self._qr_texture)
 
 
+class VehicleVerificationPage(Scroller):
+  def __init__(self, on_confirm: Callable[[], None], on_decline: Callable[[], None]):
+    super().__init__()
+
+    self._confirm_button = BigConfirmationCircleButton(
+      "confirm\nrivian r1",
+      gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
+      on_confirm,
+    )
+    self._decline_button = BigConfirmationCircleButton(
+      "not an r1 &\nuninstall",
+      gui_app.texture("icons_mici/setup/cancel.png", 64, 64),
+      on_decline,
+      red=True,
+      exit_on_confirm=False,
+    )
+
+    self._header = GreyBigButton(
+      "vehicle\nverification",
+      "scroll to continue",
+      gui_app.texture("icons_mici/setup/green_info.png", 64, 64),
+    )
+    self._r1_card = GreyBigButton(
+      "rivian r1\nonly",
+      "GaryPilot is exclusively built for Rivian R1T & R1S vehicles.",
+    )
+    self._hardware_card = GreyBigButton(
+      "hardware\nrequirement",
+      "Requires the XNOR angle harness. Do not connect to other vehicles.",
+    )
+    self._warning_card = GreyBigButton(
+      "safety\nlockout",
+      "Actuation is strictly disabled on non-Rivian vehicles.",
+    )
+
+    self._scroller.add_widgets([
+      self._header,
+      self._r1_card,
+      self._hardware_card,
+      self._warning_card,
+      self._confirm_button,
+      self._decline_button,
+    ])
+
+  def _render(self, _):
+    rl.draw_rectangle_rec(self._rect, rl.BLACK)
+    super()._render(_)
+
+
 class TermsPage(Scroller):
   def __init__(self, on_accept, on_decline):
     super().__init__()
@@ -304,7 +353,7 @@ class TermsPage(Scroller):
 
     self._terms_header = GreyBigButton("terms of\nservice", "scroll to continue",
                                        gui_app.texture("icons_mici/setup/green_info.png", 64, 64))
-    self._must_accept_card = GreyBigButton("", "You must accept the Terms of Service to use sunnypilot.")
+    self._must_accept_card = GreyBigButton("", "You must accept the Terms of Service to use GaryPilot.")
 
     self._scroller.add_widgets([
       self._terms_header,
@@ -334,9 +383,16 @@ class OnboardingWindow(Widget):
 
     self.set_rect(rl.Rectangle(0, 0, gui_app.width, gui_app.height))
 
-    # Windows — all pushed onto nav stack, _terms is always rendered as base layer
+    # Windows — all pushed onto nav stack, _vehicle_verification or _terms is rendered as base layer
     self._terms = TermsPage(on_accept=self._on_terms_accepted, on_decline=self._on_uninstall)
     self._terms.set_enabled(lambda: self.enabled)  # for nav stack
+
+    self._vehicle_verified: bool = self._accepted_terms
+    self._vehicle_verification = VehicleVerificationPage(
+      on_confirm=self._on_vehicle_verified,
+      on_decline=self._on_uninstall,
+    )
+    self._vehicle_verification.set_enabled(lambda: self.enabled)
 
     self._sunnylink_consent = SunnylinkConsentPage(
       on_accept=self._on_sunnylink_accepted,
@@ -350,6 +406,9 @@ class OnboardingWindow(Widget):
 
   def _on_uninstall(self):
     ui_state.params.put_bool("DoUninstall", True, block=True)
+
+  def _on_vehicle_verified(self):
+    self._vehicle_verified = True
 
   def show_event(self):
     super().show_event()
@@ -416,4 +475,7 @@ class OnboardingWindow(Widget):
       elif self._accepted_terms and self._sunnylink_consent_done and not self._training_done:
         gui_app.push_widget(self._training_guide)
 
-    self._terms.render(self._rect)
+    if not self._vehicle_verified:
+      self._vehicle_verification.render(self._rect)
+    else:
+      self._terms.render(self._rect)

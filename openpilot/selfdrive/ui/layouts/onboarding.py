@@ -32,10 +32,11 @@ RESTART_TRAINING_RECT = rl.Rectangle(87, 795, 472, 186)
 
 
 class OnboardingState(IntEnum):
-  TERMS = 0
-  ONBOARDING = 1
-  DECLINE = 2
-  SUNNYLINK_CONSENT = 3
+  VEHICLE_VERIFICATION = 0
+  TERMS = 1
+  ONBOARDING = 2
+  DECLINE = 3
+  SUNNYLINK_CONSENT = 4
 
 
 class TrainingGuide(Widget):
@@ -109,14 +110,54 @@ class TrainingGuide(Widget):
     return -1
 
 
+class VehicleVerificationPage(Widget):
+  def __init__(self, on_confirm=None, on_decline=None):
+    super().__init__()
+    self._on_confirm = on_confirm
+    self._on_decline = on_decline
+
+    self._title = Label(tr("Rivian R1 Vehicle Verification"), font_size=90, font_weight=FontWeight.BOLD, text_alignment=TextAlignment.LEFT)
+    self._desc = Label(
+      tr("GaryPilot is exclusively built and configured for Rivian R1T & R1S vehicles equipped with the XNOR angle harness.\n\n" +
+         "Connecting GaryPilot to any other vehicle is strictly unsupported. Actuation is permanently disabled on non-Rivian vehicles.\n\n" +
+         "Please confirm that this device is installed in a supported Rivian R1."),
+      font_size=60, font_weight=FontWeight.MEDIUM, text_alignment=TextAlignment.LEFT
+    )
+
+    self._decline_btn = Button(tr("Not an R1 / Uninstall"), button_style=ButtonStyle.DANGER, click_callback=on_decline)
+    self._confirm_btn = Button(tr("Confirm Rivian R1"), button_style=ButtonStyle.PRIMARY, click_callback=on_confirm)
+
+  def _render(self, _):
+    welcome_x = self._rect.x + 95
+    welcome_y = self._rect.y + 165
+    welcome_rect = rl.Rectangle(welcome_x, welcome_y, self._rect.width - welcome_x, 90)
+    self._title.render(welcome_rect)
+
+    desc_x = welcome_x
+    desc_y = welcome_y - 100
+    desc_rect = rl.Rectangle(desc_x, desc_y, self._rect.width - desc_x, self._rect.height - desc_y - 250)
+    self._desc.render(desc_rect)
+
+    btn_y = self._rect.y + self._rect.height - 160 - 45
+    btn_width = (self._rect.width - 45 * 3) / 2
+    self._decline_btn.render(rl.Rectangle(self._rect.x + 45, btn_y, btn_width, 160))
+    self._confirm_btn.render(rl.Rectangle(self._rect.x + 45 * 2 + btn_width, btn_y, btn_width, 160))
+
+    if DEBUG:
+      rl.draw_rectangle_lines_ex(welcome_rect, 3, rl.RED)
+      rl.draw_rectangle_lines_ex(desc_rect, 3, rl.RED)
+
+    return -1
+
+
 class TermsPage(Widget):
   def __init__(self, on_accept=None, on_decline=None):
     super().__init__()
     self._on_accept = on_accept
     self._on_decline = on_decline
 
-    self._title = Label(tr("Welcome to sunnypilot"), font_size=90, font_weight=FontWeight.BOLD, text_alignment=TextAlignment.LEFT)
-    self._desc = Label(tr("You must accept the Terms of Service to use sunnypilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."),
+    self._title = Label(tr("Welcome to GaryPilot"), font_size=90, font_weight=FontWeight.BOLD, text_alignment=TextAlignment.LEFT)
+    self._desc = Label(tr("You must accept the Terms of Service to use GaryPilot. Read the latest terms at https://sunnypilot.ai/terms before continuing."),
                        font_size=90, font_weight=FontWeight.MEDIUM, text_alignment=TextAlignment.LEFT)
 
     self._decline_btn = Button(tr("Decline"), click_callback=on_decline)
@@ -149,10 +190,10 @@ class TermsPage(Widget):
 class DeclinePage(Widget):
   def __init__(self, back_callback=None):
     super().__init__()
-    self._text = Label(tr("You must accept the Terms of Service in order to use sunnypilot."),
+    self._text = Label(tr("You must accept the Terms of Service in order to use GaryPilot."),
                        font_size=90, font_weight=FontWeight.MEDIUM, text_alignment=TextAlignment.LEFT)
     self._back_btn = Button(tr("Back"), click_callback=back_callback)
-    self._uninstall_btn = Button(tr("Decline, uninstall sunnypilot"), button_style=ButtonStyle.DANGER,
+    self._uninstall_btn = Button(tr("Decline, uninstall GaryPilot"), button_style=ButtonStyle.DANGER,
                                  click_callback=self._on_uninstall_clicked)
 
   def _on_uninstall_clicked(self):
@@ -178,19 +219,11 @@ class OnboardingWindow(Widget):
     super().__init__()
     self._accepted_terms: bool = ui_state.params.get("HasAcceptedTerms") == terms_version
     self._training_done: bool = ui_state.params.get("CompletedTrainingVersion") == training_version
-
-    self._state = OnboardingState.TERMS if not self._accepted_terms else OnboardingState.ONBOARDING
-
-    # Windows
-    self._terms = TermsPage(on_accept=self._on_terms_accepted, on_decline=self._on_terms_declined)
-    self._training_guide: TrainingGuide | None = None
-    self._decline_page = DeclinePage(back_callback=self._on_decline_back)
-
-    # sunnylink consent pages
     self._accepted_terms = self._accepted_terms and ui_state.params.get("HasAcceptedTermsSP") == terms_version_sp
     self._sunnylink = SunnylinkOnboarding()
+
     if not self._accepted_terms:
-      self._state = OnboardingState.TERMS
+      self._state = OnboardingState.VEHICLE_VERIFICATION
     elif not self._sunnylink.completed:
       self._state = OnboardingState.SUNNYLINK_CONSENT
     elif not self._training_done:
@@ -198,9 +231,22 @@ class OnboardingWindow(Widget):
     else:
       self._state = OnboardingState.ONBOARDING
 
+    # Windows
+    self._vehicle_page = VehicleVerificationPage(on_confirm=self._on_vehicle_confirmed, on_decline=self._on_vehicle_declined)
+    self._terms = TermsPage(on_accept=self._on_terms_accepted, on_decline=self._on_terms_declined)
+    self._training_guide: TrainingGuide | None = None
+    self._decline_page = DeclinePage(back_callback=self._on_decline_back)
+
   @property
   def completed(self) -> bool:
     return self._accepted_terms and self._sunnylink.completed and self._training_done
+
+  def _on_vehicle_confirmed(self):
+    self._state = OnboardingState.TERMS
+
+  def _on_vehicle_declined(self):
+    ui_state.params.put_bool("DoUninstall", True, block=True)
+    gui_app.request_close()
 
   def _on_terms_declined(self):
     self._state = OnboardingState.DECLINE
@@ -225,7 +271,9 @@ class OnboardingWindow(Widget):
     if self._training_guide is None:
       self._training_guide = TrainingGuide(completed_callback=self._on_completed_training)
 
-    if self._state == OnboardingState.TERMS:
+    if self._state == OnboardingState.VEHICLE_VERIFICATION:
+      self._vehicle_page.render(self._rect)
+    elif self._state == OnboardingState.TERMS:
       self._terms.render(self._rect)
     elif self._state == OnboardingState.SUNNYLINK_CONSENT:
       self._sunnylink.render(self._rect)

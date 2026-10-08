@@ -2,6 +2,7 @@ import capnp
 from typing import Any
 
 from openpilot.cereal import custom
+from openpilot.common.swaglog import cloudlog
 from opendbc.car import structs
 
 _FIELDS = '__dataclass_fields__'  # copy of dataclasses._FIELDS
@@ -65,3 +66,28 @@ def convert_carControlSP(struct: capnp.lib.capnp._DynamicStructReader) -> struct
   )
 
   return struct_dataclass
+
+
+def enforce_vehicle_safety_gate(CP, CI_CC, openpilot_enabled_toggle: bool) -> bool:
+  """GaryPilot safety lockout: strictly enforce Rivian R1 platform.
+
+  Any non-Rivian vehicle is permanently locked into passive dashcam-only mode
+  with SafetyModel.noOutput so no CAN actuation packets can ever be sent.
+  """
+  is_rivian = (CP.brand == "rivian")
+  if not is_rivian:
+    cloudlog.error(
+      f"GaryPilot: Non-Rivian vehicle detected (brand='{CP.brand}', fingerprint='{CP.carFingerprint}'). " +
+      "Actuation is strictly disabled."
+    )
+    CP.dashcamOnly = True
+
+  controller_available = CI_CC is not None and openpilot_enabled_toggle and not CP.dashcamOnly
+  CP.passive = not controller_available or CP.dashcamOnly
+  if CP.passive:
+    safety_config = structs.CarParams.SafetyConfig()
+    safety_config.safetyModel = structs.CarParams.SafetyModel.noOutput
+    CP.safetyConfigs = [safety_config]
+
+  return controller_available
+
