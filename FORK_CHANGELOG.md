@@ -12,6 +12,11 @@ Fork versions are tagged `r1t-vX.Y.Z` and are independent of the upstream sunnyp
 
 ## [Unreleased]
 
+### Added
+
+- Added a custom Outrun/Synthwave retro screensaver (`ScreenSaverSP`) featuring a 3D perspective neon grid, starry night sky, wireframe mountains, and a glowing Rivian logo sunset.
+- Optimized screensaver UI rendering performance (reduced overdraw by replacing 200 alpha lines with a single gradient rectangle, improving mobile GPU fill-rate efficiency on the comma 4).
+
 ## [r1t-v0.1.0] - 2026-10-07
 
 ### Added
