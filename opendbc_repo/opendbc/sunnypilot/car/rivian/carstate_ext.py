@@ -18,7 +18,6 @@ ButtonType = structs.CarState.ButtonEvent.Type
 MAX_SET_SPEED = 85 * CV.MPH_TO_MS
 MIN_SET_SPEED = 20 * CV.MPH_TO_MS
 
-
 class CarStateExt:
   def __init__(self, CP: structs.CarParams, CP_SP: structs.CarParamsSP):
     self.CP = CP
@@ -32,6 +31,7 @@ class CarStateExt:
     self.decrease_counter = 0
 
     self.vdm_user_adas_request = 0
+    self._lkas_pending = False
 
     # Lazy import Params to avoid breaking standalone opendbc import
     from openpilot.common.params import Params
@@ -58,8 +58,16 @@ class CarStateExt:
       button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.altButton2))
 
     # Signal UP_1 state via lkas button to toggle MADS
-    if vdm == 1 and self.vdm_user_adas_request != 1:
-      button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.lkas))
+    # 1-frame lookahead to prevent UP_1 flashing during sweep to UP_2
+    if self._lkas_pending:
+      if vdm != 2:
+        button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.lkas))
+      self._lkas_pending = False
+
+    if vdm == 1 and self.vdm_user_adas_request not in (1, 2):
+      # DISENGAGE mode (value 2).
+      if not (self.steering_mode_on_brake == 2 and ret.cruiseState.enabled):
+        self._lkas_pending = True
     elif vdm != 1 and self.vdm_user_adas_request == 1:
       button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas))
 

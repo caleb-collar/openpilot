@@ -100,8 +100,8 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
     return self.packer.make_can_msg_safety("VDM_PropStatus", 0, values, fix_checksum=checksum)
 
   
-  def _lkas_button_msg(self, enabled):
-    values = {"VDM_UserAdasRequest": 1 if enabled else 0, "VDM_AdasStatus_Counter": self.cnt_adas % 15}
+  def _lkas_button_msg(self, req):
+    values = {"VDM_UserAdasRequest": req, "VDM_AdasStatus_Counter": self.cnt_adas % 15}
     self.__class__.cnt_adas += 1
     return self.packer.make_can_msg_safety("VDM_AdasSts", 0, values, fix_checksum=checksum)
 
@@ -187,25 +187,23 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
       self.assertTrue(self._tx(self.packer.make_can_msg_safety("SCCM_WheelTouch", 2, values)))
 
   
-  cnt_stalk = 0
-
-  def _stalk_msg(self, req):
-    values = {"VDM_UserAdasRequest": req, "VDM_AdasStatus_Counter": self.cnt_stalk % 15}
-    self.__class__.cnt_stalk += 1
-    return self.packer.make_can_msg_safety("VDM_AdasSts", 0, values, fix_checksum=checksum)
-
   def test_mads_button_gated_on_cruise(self):
     for cruise in (False, True):
       self._rx(self._pcm_status_msg(1 if cruise else 0))
-      self._rx(self._stalk_msg(1))
+      self._rx(self._lkas_button_msg(1))
       expected = 0 if cruise else 1
       self.assertEqual(self.safety.get_mads_button_press(), expected, f"cruise={cruise}")
-      self._rx(self._stalk_msg(0))
+      self._rx(self._lkas_button_msg(0))
+
+  def test_mads_button_up_2_suppression(self):
+    self._rx(self._lkas_button_msg(2))
+    self.assertEqual(self.safety.get_mads_button_press(), 0)
+    self._rx(self._lkas_button_msg(0))
 
   def test_rx_hook(self):
     # checksum, counter, and quality flag checks
     for quality_flag in (True, False):
-      for msg_type in ("speed", "speed_2"):
+      for msg_type in ("speed", "speed_2", "adas_sts"):
         self.safety.set_controls_allowed(True)
         # send multiple times to verify counter checks
         for _ in range(10):
@@ -213,9 +211,12 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
             msg = self._speed_msg(0, quality_flag=quality_flag)
           elif msg_type == "speed_2":
             msg = self._speed_msg_2(0, quality_flag=quality_flag)
+          elif msg_type == "adas_sts":
+            msg = self._lkas_button_msg(0)
 
-          self.assertEqual(quality_flag, self._rx(msg))
-          self.assertEqual(quality_flag, self.safety.get_controls_allowed())
+          expected_rx = True if msg_type == "adas_sts" else quality_flag
+          self.assertEqual(expected_rx, self._rx(msg))
+          self.assertEqual(expected_rx, self.safety.get_controls_allowed())
 
         # Mess with checksum to make it fail
         msg[0].data[0] = 0xff

@@ -2,11 +2,11 @@
 
 #include "opendbc/safety/declarations.h"
 
-static void stock_ecu_check(bool stock_ecu_detected);
+static uint8_t rivian_prev_user_adas_request = 0U;
 
 static uint8_t rivian_get_counter(const CANPacket_t *msg) {
   // Signal: ESP_Status_Counter, VDM_PropStatus_Counter, VDM_AdasSts_Counter
-  return (msg->addr == 0x162U) ? (msg->data[1] & 0xFU) : (msg->data[1] & 0xFU);
+  return msg->data[1] & 0xFU;
 }
 
 static uint32_t rivian_get_checksum(const CANPacket_t *msg) {
@@ -82,7 +82,8 @@ static void rivian_rx_hook(const CANPacket_t *msg) {
       // UP_1 (value 1) is the MADS toggle gesture. Drive mads_button_press so
       // the panda MADS state machine can grant controls_allowed_lateral for Mode B
       // without requiring ACC to be active.
-      mads_button_press = ((user_adas_request == 1U) && !cruise_engaged_prev) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+      mads_button_press = ((user_adas_request == 1U) && !cruise_engaged_prev && (rivian_prev_user_adas_request != 2U)) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+      rivian_prev_user_adas_request = user_adas_request;
     }
 
     // Driver torque
@@ -110,7 +111,6 @@ static void rivian_rx_hook(const CANPacket_t *msg) {
     if (msg->addr == 0x100U) {
       const int feature_status = msg->data[2] >> 5U;
       pcm_cruise_check(feature_status == 1);
-      stock_ecu_check(false);
     }
   }
 }
