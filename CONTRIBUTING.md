@@ -1,4 +1,4 @@
-# Contributing to `caleb-collar/openpilot` (r1t-xnor-adventure)
+# Contributing to `caleb-collar/openpilot` (GaryPilot)
 
 This fork carries a small set of Rivian R1T changes on top of xnor-tech's `rx-dev` prebuilt.
 Read [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md) before changing anything that touches lateral control or panda safety.
@@ -7,7 +7,7 @@ Read [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md) before changing anything that 
 
 ```bash
 git clone git@github.com:caleb-collar/openpilot.git && cd openpilot
-git switch r1t-xnor-adventure
+git switch GaryPilot
 git config core.hooksPath .githooks                     # enables the Conventional Commits hook
 git remote add upstream git@github.com:xnor-tech/openpilot.git
 git remote add adventure git@github.com:AdventurePilotDev/openpilot.git
@@ -77,12 +77,12 @@ The upstream prebuilt root commit (`openpilot rx-dev prebuilt`) is exempt. CI on
   `Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`.
 * **Do not edit the root `CHANGELOG.md`.** It belongs to upstream sunnypilot and is parsed on the device for
   release notes (`openpilot/common/version.py`, `openpilot/system/updated/updated.py`).
-* Versions follow [SemVer](https://semver.org/) for the fork itself, tagged `r1t-vX.Y.Z`.
+* Versions follow [SemVer](https://semver.org/) for the fork itself, tagged `r1-vX.Y.Z`.
 
 ## Branches
 
-* `r1t-xnor-adventure` is the **device branch**. Installed cars auto-update from it. Only promote verified work, by fast-forward.
-* Develop on `feat/<topic>` / `fix/<topic>` (or the `r1t-dev` integration branch). Keep history linear (rebase, no merges).
+* `GaryPilot` is the **device branch**. Installed cars auto-update from it. Only promote verified work, by fast-forward.
+* Develop on `feat/<topic>` / `fix/<topic>` (or the `r1-dev` integration branch). Keep history linear (rebase, no merges).
 * The panda firmware rebuild is always a single, final `build(panda): ...` commit (see the plan, Phase 4 / Phase 8).
 
 ## Hard rules for this prebuilt branch

@@ -36,15 +36,44 @@ A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilo
 
 Supported hardware: **comma 3X** and **comma four**, in a Rivian R1T/R1S with the angle harness.
 
-1. On the device: **Settings → Software → Uninstall**. The device reboots into setup.
-2. Choose **Custom Software** and enter:
-   ```
-   caleb-collar/GaryPilot
-   ```
-   (equivalent to `https://installer.comma.ai/caleb-collar/GaryPilot`)
-3. On first boot the panda is reflashed with this branch's firmware.
+### New Install or Clean Reinstall
+1. On the device: **Settings → Software → Uninstall** *(uninstalls driving software; does not factory-reset AGNOS or Wi-Fi)*.
+2. The device reboots into the setup screen. Choose **Custom Software** and enter either:
+   * **Full URL**:
+     ```text
+     https://installer.comma.ai/caleb-collar/GaryPilot
+     ```
+   * **Shorthand**:
+     ```text
+     caleb-collar/GaryPilot
+     ```
+   > [!IMPORTANT]
+   > The branch name **`GaryPilot`** is case-sensitive in git. Ensure both `G` and `P` are capitalized.
 
-**Rollback:** repeat the steps with `xnor-tech/rx-dev`. The panda firmware is restored automatically.
+3. On first boot the panda is reflashed with this branch's firmware automatically.
+
+### Switching from an Existing Fork or Prior Branch
+If your Comma was already running a previous branch or another fork pointing to `caleb-collar/openpilot`:
+* **Via On-Device UI (Fastest):**
+  1. Open **Settings → Software → Select a branch**.
+  2. Select **`GaryPilot`**.
+  3. Tap **Check for Updates** (or wait for the download to finish).
+  4. Tap **Reboot** when prompted.
+* **Via SSH:**
+  ```bash
+  ssh comma@<device-ip>
+  cd /data/openpilot
+  git remote set-url origin https://github.com/caleb-collar/openpilot.git
+  git fetch origin GaryPilot
+  git checkout -B GaryPilot origin/GaryPilot
+  git submodule sync
+  git submodule update --init --recursive
+  touch prebuilt
+  sudo rm -rf /data/safe_staging/*
+  sudo reboot
+  ```
+
+**Rollback:** repeat the steps with `xnor-tech/rx-dev` (`https://installer.comma.ai/xnor-tech/rx-dev`). The panda firmware is restored automatically.
 
 > [!IMPORTANT]
 > Installed devices auto-update from `GaryPilot`. Only verified changes are promoted to that branch.

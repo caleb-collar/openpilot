@@ -4,7 +4,7 @@ name: fork-ci
 # after the branch root (the upstream xnor rx-dev prebuilt), so upstream content is never linted.
 on:
   push:
-    branches: [GaryPilot, r1-xnor-adventure, r1-dev, 'feat/**', 'fix/**', 'sync/**']
+    branches: [GaryPilot, r1-dev, 'feat/**', 'fix/**', 'sync/**']
   pull_request:
 
 concurrency:

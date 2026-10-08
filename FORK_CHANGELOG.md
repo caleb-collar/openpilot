@@ -14,6 +14,11 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ### Added
 
+- Added programmatic badge generator script (`fork/scripts/generate_screensaver_badge.py`) that renders retro 1980s chrome typography with embedded version number (e.g. `GaryPilot v0.1.0`), auto-detecting git release tags, updating `screen_saver.py`, and supporting `--check` mode for CI.
+- Updated screensaver badge bottom gradient to vibrant Neon Magenta (`#ff0080` to `#9400d3`) for crisp contrast against wireframe mountain silhouettes.
+- Restored authentic Rivian compass emblem bytes to the screensaver retro sun with clean PNG headers and exact 92x91 active bounding box within 128x128 canvas, eliminating sky blowout and preserving starry night views on Comma 4 and Comma 3X.
+- Added legal IP & trademark protections: updated `LICENSE.md` with explicit exclusions for visual assets and UI themes, added trademark disclosures in `README.md`, and disassociated internal logo asset filenames and variable names (`r_logo`).
+- Documented full installer URL (`https://installer.comma.ai/caleb-collar/GaryPilot`), shorthand slug (`caleb-collar/GaryPilot`), case-sensitivity requirements, and on-device/SSH branch switching instructions across `README.md` and `INTEGRATION_PLAN.md`.
 - Added "GaryPilot" retro 1980s chromed gradient pixel art badge to the Outrun screensaver (`ScreenSaverSP`), supporting both Comma 4 and Comma 3X resolutions.
 - Centered and enlarged "GaryPilot" badge on the screensaver: positioned precisely in the vertical midpoint of the lower half of the display (equidistant 30px margins to horizon and bottom on Comma 4, 150px margins on Comma 3X) with 1.5x scale multiplier (6.0x crisp integer multiplier on Comma 3X).
 - Achieved 100% parity between the screensaver preview simulator (`preview_screensaver.py`) and real Comma 4 / 3X devices by sharing `draw_screensaver(...)` directly from `openpilot/system/ui/sunnypilot/widgets/screen_saver.py`, with 100% deterministic screenshot capture.

@@ -189,6 +189,9 @@ Discovery command: `git log --oneline adventure/stg-a-src -- <path>`. Use `git l
 
 1. The repository must be `caleb-collar/openpilot` and **public**. ✅ (fork created)
 2. The branch name equals the URL slug: `GaryPilot`.
+   - Full URL: `https://installer.comma.ai/caleb-collar/GaryPilot`
+   - Shorthand: `caleb-collar/GaryPilot`
+   - Branch casing: `GaryPilot` is case-sensitive in git.
 3. `launch_openpilot.sh` is at the root with mode `100755`. ✅ (verified in the index)
 4. The `prebuilt` marker stays present, and all runtime binaries are committed.
 5. No LFS pointers. No file is 100 MB or larger. ✅ (largest is 58 MB)
@@ -305,11 +308,32 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
    ```
 
 ### Phase 7: Device Onboarding (comma 3X / comma four)
+
+**Method A: Fresh Setup / Reinstall**
 1. Settings → Software → **Uninstall** (both UIs set `DoUninstall`). The device reboots into setup.
-2. Choose **Custom Software** and enter `caleb-collar/GaryPilot`.
+2. Choose **Custom Software** and enter either:
+   * Full URL: `https://installer.comma.ai/caleb-collar/GaryPilot`
+   * Shorthand: `caleb-collar/GaryPilot`
 3. First boot: `pandad` reflashes the panda with the fork firmware. Expect a brief panda reset.
 4. Run B1–B9.
-5. **Rollback:** reinstall `xnor-tech/rx-dev` the same way. `pandad` flashes rx-dev's firmware back automatically.
+
+**Method B: Branch Switch from Existing Fork Clone**
+If the device already has `caleb-collar/openpilot` as its origin remote:
+* On-device UI: **Settings → Software → Select a branch** → choose `GaryPilot` → tap **Check for Updates** → **Reboot**.
+* Via SSH:
+  ```bash
+  cd /data/openpilot
+  git remote set-url origin https://github.com/caleb-collar/openpilot.git
+  git fetch origin GaryPilot
+  git checkout -B GaryPilot origin/GaryPilot
+  git submodule sync
+  git submodule update --init --recursive
+  touch prebuilt
+  sudo rm -rf /data/safe_staging/*
+  sudo reboot
+  ```
+
+**Rollback:** reinstall `xnor-tech/rx-dev` (`https://installer.comma.ai/xnor-tech/rx-dev`) the same way. `pandad` flashes rx-dev's firmware back automatically.
 
 ### Phase 8: Upstream Resync Workflow
 When xnor publishes a new `rx-dev` prebuilt (a force-pushed orphan):
