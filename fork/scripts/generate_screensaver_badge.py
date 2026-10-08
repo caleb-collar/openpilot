@@ -149,21 +149,133 @@ def render_chrome_badge(text: str, font_size: int = 46) -> Image.Image:
   return final_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
 
-def generate_badge_png_bytes(version_str: str) -> bytes:
+def generate_badge_png_bytes(version_str: str | None = None) -> bytes:
   """Generate PNG bytes directly for programmatic runtime use."""
-  text = f"GaryPilot {version_str}"
+  text = f"GaryPilot {version_str}".strip() if version_str else "GaryPilot"
   img = render_chrome_badge(text, font_size=46)
   buf = io.BytesIO()
   img.save(buf, format="PNG", optimize=True)
   return buf.getvalue()
 
 
-def generate_badge_base64(version_str: str) -> str:
+def generate_badge_base64(version_str: str | None = None) -> str:
   """Generate base64 encoded PNG of the badge."""
   return base64.b64encode(generate_badge_png_bytes(version_str)).decode("utf-8")
 
 
-def update_screen_saver(b64_string: str) -> bool:
+def create_pixel_rivian() -> Image.Image:
+  """Create authentic 76x42 pixel art Rivian R1T rear view."""
+  W, H = 76, 42
+  img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+  d = ImageDraw.Draw(img)
+
+  BODY = (220, 226, 236, 255)
+  BODY_LIGHT = (250, 253, 255, 255)
+  BODY_SHADOW = (145, 155, 172, 255)
+  BODY_DARK = (85, 95, 112, 255)
+  ROOF = (18, 22, 30, 255)
+  PILLAR = (30, 36, 46, 255)
+  GLASS = (12, 16, 26, 255)
+  SUNSET_1 = (255, 100, 40, 200)
+  SUNSET_2 = (255, 160, 60, 170)
+  SUNSET_3 = (255, 210, 90, 140)
+  BUMPER = (24, 26, 34, 255)
+  BUMPER_ACCENT = (48, 54, 66, 255)
+  TIRE = (10, 12, 16, 255)
+  TIRE_TREAD = (30, 34, 44, 255)
+  RED_HOT = (255, 0, 35, 255)
+  RED_CORE = (255, 220, 230, 255)
+  RED_GLOW = (255, 0, 50, 120)
+  HOOK = (245, 180, 35, 255)
+  PLATE = (0, 240, 255, 255)
+  PLATE_TEXT = (10, 20, 40, 255)
+  MIRROR = (190, 200, 215, 255)
+
+  # 1. Tires
+  d.rectangle([4, 26, 14, 40], fill=TIRE)
+  d.rectangle([5, 27, 8, 39], fill=TIRE_TREAD)
+  d.rectangle([61, 26, 71, 40], fill=TIRE)
+  d.rectangle([67, 27, 70, 39], fill=TIRE_TREAD)
+
+  # 2. Lower Body
+  d.rectangle([8, 21, 67, 33], fill=BODY)
+  d.rectangle([6, 23, 8, 32], fill=BODY_SHADOW)
+  d.rectangle([67, 23, 69, 32], fill=BODY_SHADOW)
+  d.line([(9, 31), (66, 31)], fill=BODY_SHADOW)
+  d.line([(9, 32), (66, 32)], fill=BODY_DARK)
+
+  # 3. Bumper & Skidplate
+  d.rectangle([12, 33, 63, 38], fill=BUMPER)
+  d.rectangle([20, 36, 55, 39], fill=BUMPER_ACCENT)
+  d.rectangle([23, 35, 26, 37], fill=HOOK)
+  d.rectangle([49, 35, 52, 37], fill=HOOK)
+  d.rectangle([32, 33, 43, 37], fill=PLATE)
+  d.point([(34, 35), (36, 35), (38, 35), (40, 35)], fill=PLATE_TEXT)
+
+  # 4. Tailgate top lip
+  d.rectangle([10, 17, 65, 19], fill=BODY)
+  d.line([(10, 17), (65, 17)], fill=BODY_LIGHT)
+
+  # 5. Greenhouse (Cab & Windows)
+  for y in range(4, 17):
+    f = (y - 4) / 13.0
+    x1 = int(22 - f * 4)
+    x2 = int(53 + f * 4)
+    d.line([(x1, y), (x2, y)], fill=PILLAR)
+
+  d.rectangle([23, 3, 52, 5], fill=ROOF)
+  d.line([(24, 3), (51, 3)], fill=BODY_DARK)
+  d.line([(35, 4), (40, 4)], fill=RED_HOT)
+  d.line([(36, 4), (39, 4)], fill=RED_CORE)
+
+  for y in range(6, 16):
+    f = (y - 6) / 10.0
+    x1 = int(25 - f * 4)
+    x2 = int(50 + f * 4)
+    d.line([(x1, y), (x2, y)], fill=GLASS)
+
+  d.line([(27, 13), (48, 13)], fill=SUNSET_1)
+  d.line([(28, 11), (47, 11)], fill=SUNSET_2)
+  d.line([(29, 9), (46, 9)], fill=SUNSET_3)
+
+  d.rectangle([29, 10, 33, 13], fill=(16, 20, 30, 255))
+  d.rectangle([42, 10, 46, 13], fill=(16, 20, 30, 255))
+
+  d.rectangle([12, 12, 15, 14], fill=MIRROR)
+  d.rectangle([60, 12, 63, 14], fill=MIRROR)
+  d.point([(12, 13), (63, 13)], fill=ROOF)
+
+  # 6. Iconic Rivian Coast-to-Coast Red Lightbar
+  d.line([(10, 18), (65, 18)], fill=RED_GLOW)
+  d.line([(10, 22), (65, 22)], fill=RED_GLOW)
+  d.line([(10, 19), (65, 19)], fill=RED_HOT)
+  d.line([(10, 20), (65, 20)], fill=RED_HOT)
+  d.line([(13, 19), (62, 19)], fill=RED_CORE)
+  d.rectangle([9, 18, 12, 21], fill=RED_HOT)
+  d.point([(10, 19), (11, 19)], fill=RED_CORE)
+  d.rectangle([63, 18, 66, 21], fill=RED_HOT)
+  d.point([(64, 19), (65, 19)], fill=RED_CORE)
+
+  for x in [27, 31, 35, 40, 44, 48]:
+    d.point([(x, 26)], fill=BODY_SHADOW)
+
+  return img
+
+
+def generate_rivian_png_bytes() -> bytes:
+  """Generate PNG bytes of the pixel art Rivian sprite."""
+  img = create_pixel_rivian()
+  buf = io.BytesIO()
+  img.save(buf, format="PNG", optimize=True)
+  return buf.getvalue()
+
+
+def generate_rivian_base64() -> str:
+  """Generate base64 encoded PNG of the pixel art Rivian sprite."""
+  return base64.b64encode(generate_rivian_png_bytes()).decode("utf-8")
+
+
+def update_screen_saver(gp_b64: str, riv_b64: str) -> bool:
   with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
     lines = f.readlines()
 
@@ -171,7 +283,12 @@ def update_screen_saver(b64_string: str) -> bool:
   new_lines = []
   for line in lines:
     if line.startswith("GARYPILOT_LOGO_B64 = "):
-      new_line = f'GARYPILOT_LOGO_B64 = "{b64_string}"  # noqa: E501\n'
+      new_line = f'GARYPILOT_LOGO_B64 = "{gp_b64}"  # noqa: E501\n'
+      if line != new_line:
+        changed = True
+      new_lines.append(new_line)
+    elif line.startswith("RIVIAN_SPRITE_B64 = "):
+      new_line = f'RIVIAN_SPRITE_B64 = "{riv_b64}"  # noqa: E501\n'
       if line != new_line:
         changed = True
       new_lines.append(new_line)
@@ -186,29 +303,35 @@ def update_screen_saver(b64_string: str) -> bool:
 
 
 def main():
-  parser = argparse.ArgumentParser(description="Generate GaryPilot Chromed Badge with Version")
-  parser.add_argument("--version", type=str, default=None, help="Explicit version string (e.g. v0.1.0)")
-  parser.add_argument("--check", action="store_true", help="Check if current code matches generated badge without modifying")
+  parser = argparse.ArgumentParser(description="Generate GaryPilot Chromed Badge and Pixel Art Rivian")
+  parser.add_argument("--version", type=str, default=None, help="Explicit version string or None for title only")
+  parser.add_argument("--check", action="store_true", help="Check if current code matches generated assets without modifying")
   args = parser.parse_args()
 
-  version = args.version or detect_version()
-  b64_str = generate_badge_base64(version)
+  gp_b64 = generate_badge_base64(args.version)
+  riv_b64 = generate_rivian_base64()
 
   if args.check:
     with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
       content = f.read()
-    if f'GARYPILOT_LOGO_B64 = "{b64_str}"' in content:
-      print(f"[✓] Badge in screen_saver.py matches version: {version}")
+    gp_ok = f'GARYPILOT_LOGO_B64 = "{gp_b64}"' in content
+    riv_ok = f'RIVIAN_SPRITE_B64 = "{riv_b64}"' in content
+    if gp_ok and riv_ok:
+      print("[✓] Screensaver assets in screen_saver.py are up to date.")
       sys.exit(0)
     else:
-      print(f"[✗] Badge in screen_saver.py is OUT OF DATE for version: {version}")
+      print("[✗] Screensaver assets in screen_saver.py are OUT OF DATE.")
+      if not gp_ok:
+        print("  - GARYPILOT_LOGO_B64 mismatch")
+      if not riv_ok:
+        print("  - RIVIAN_SPRITE_B64 mismatch")
       sys.exit(1)
 
-  changed = update_screen_saver(b64_str)
+  changed = update_screen_saver(gp_b64, riv_b64)
   if changed:
-    print(f"[✓] Successfully generated and updated GaryPilot badge for '{version}' in screen_saver.py")
+    print("[✓] Successfully generated and updated GaryPilot badge and Rivian sprite in screen_saver.py")
   else:
-    print(f"[✓] GaryPilot badge in screen_saver.py is already up to date for '{version}'")
+    print("[✓] Screensaver assets in screen_saver.py are already up to date")
 
 
 if __name__ == "__main__":

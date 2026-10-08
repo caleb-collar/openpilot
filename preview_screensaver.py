@@ -57,7 +57,14 @@ class ScreensaverRenderer:
     if self.grid_offset > self.spacing:
       self.grid_offset -= self.spacing
 
-  def draw(self, texture, tex_gp=None, anim_time: float | None = None, grid_offset: float | None = None):
+  def draw(
+    self,
+    texture,
+    tex_gp=None,
+    tex_rivian=None,
+    anim_time: float | None = None,
+    grid_offset: float | None = None,
+  ):
     t = anim_time if anim_time is not None else time.monotonic()
     offset = grid_offset if grid_offset is not None else self.grid_offset
     draw_screensaver(
@@ -67,6 +74,7 @@ class ScreensaverRenderer:
       offset,
       texture,
       tex_gp,
+      tex_rivian,
       t,
     )
 
@@ -74,17 +82,18 @@ class ScreensaverRenderer:
 def capture_screenshot(device_key: str, out_path: str, anim_time: float = 0.0):
   """Headless render and export to PNG with 100% determinism."""
   w, h, title = RESOLUTIONS[device_key]
-  logo_file, gp_file = ensure_screensaver_assets()
+  logo_file, gp_file, rivian_file = ensure_screensaver_assets()
 
   rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
   rl.init_window(w, h, title.encode("utf-8"))
   texture = rl.load_texture(logo_file.encode("utf-8"))
   tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+  tex_rivian = rl.load_texture(rivian_file.encode("utf-8"))
 
   renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
 
   rl.begin_drawing()
-  renderer.draw(texture, tex_gp, anim_time=anim_time, grid_offset=0.0)
+  renderer.draw(texture, tex_gp, tex_rivian, anim_time=anim_time, grid_offset=0.0)
   rl.end_drawing()
 
   img = rl.load_image_from_screen()
@@ -92,6 +101,7 @@ def capture_screenshot(device_key: str, out_path: str, anim_time: float = 0.0):
   rl.unload_image(img)
   rl.unload_texture(texture)
   rl.unload_texture(tex_gp)
+  rl.unload_texture(tex_rivian)
   rl.close_window()
   print(f"[✓] Screenshot saved to: {out_path} ({w}x{h})")
 
@@ -105,12 +115,13 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
     return
 
   w, h, title = RESOLUTIONS[device_key]
-  logo_file, gp_file = ensure_screensaver_assets()
+  logo_file, gp_file, rivian_file = ensure_screensaver_assets()
 
   rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
   rl.init_window(w, h, title.encode("utf-8"))
   texture = rl.load_texture(logo_file.encode("utf-8"))
   tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+  tex_rivian = rl.load_texture(rivian_file.encode("utf-8"))
 
   renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
 
@@ -122,7 +133,7 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
     t = i / fps
     grid_offset = (renderer.grid_speed * t) % renderer.spacing
     rl.begin_drawing()
-    renderer.draw(texture, tex_gp, anim_time=t, grid_offset=grid_offset)
+    renderer.draw(texture, tex_gp, tex_rivian, anim_time=t, grid_offset=grid_offset)
     rl.end_drawing()
 
     img = rl.load_image_from_screen()
@@ -132,6 +143,7 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
 
   rl.unload_texture(texture)
   rl.unload_texture(tex_gp)
+  rl.unload_texture(tex_rivian)
   rl.close_window()
 
   if os.path.exists(temp_frame_path):
@@ -152,7 +164,7 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
 def run_interactive(initial_device: str):
   """Run interactive Raylib preview window."""
   device_key = initial_device
-  logo_file, gp_file = ensure_screensaver_assets()
+  logo_file, gp_file, rivian_file = ensure_screensaver_assets()
 
   while True:
     w, h, title = RESOLUTIONS[device_key]
@@ -163,6 +175,7 @@ def run_interactive(initial_device: str):
     rl.set_target_fps(60)
     texture = rl.load_texture(logo_file.encode("utf-8"))
     tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+    tex_rivian = rl.load_texture(rivian_file.encode("utf-8"))
     renderer = ScreensaverRenderer(w, h, is_comma4)
 
     switch_to = None
@@ -185,15 +198,17 @@ def run_interactive(initial_device: str):
       elif rl.is_key_pressed(rl.KeyboardKey.KEY_Q):
         rl.unload_texture(texture)
         rl.unload_texture(tex_gp)
+        rl.unload_texture(tex_rivian)
         rl.close_window()
         return
 
       rl.begin_drawing()
-      renderer.draw(texture, tex_gp)
+      renderer.draw(texture, tex_gp, tex_rivian)
       rl.end_drawing()
 
     rl.unload_texture(texture)
     rl.unload_texture(tex_gp)
+    rl.unload_texture(tex_rivian)
     rl.close_window()
 
     if switch_to:
