@@ -29,6 +29,7 @@
 | D4 | No new param keys or cereal enums. Features that need them are excluded | Prebuilt binaries can't be rebuilt (§2.2) |
 | D5 | `r1-xnor-adventure` is fast-forward-only from tested branches | Installed devices auto-update from it |
 | D6 | Port by hand, reading `stg-a-src` commit history. Use the prebuilt diff only as a cross-check | No shared history. Source commits carry rationale, tests, and route IDs |
+| D7 | **Rivian default steering mode is REMAIN_ACTIVE** (steer through braking). P4 is dropped: `MadsSteeringMode` is never written by the car port, so the stock param default applies (owner decision, deviates from stg-a) | Lateral should hold the line through a braking turn. Pushing the stalk to UP_2 is the reliable full disengage. B5b (UP_1 with ACC on) is then the common path, so it has explicit Python and panda tests |
 
 ---
 
@@ -143,7 +144,7 @@ Legend: **Port** = bring over as is (re-applied by hand). **Adapt** = port with 
 | P1 | `sunnypilot/car/rivian/carstate_ext.py` | `update_stalk_controls()`: UP_1 rising edge (from IDLE/DOWN) → deferred `ButtonType.lkas` with 1-frame lookahead (dropped if the next frame is UP_2). Suppressed when steering mode is DISENGAGE and ACC is on. UP_2 edges → `altButton2` press/release | **Port** | Core stalk semantics |
 | P2 | same | Aggregate `buttonEvents` across sub-parsers (stops `gapAdjustCruise` overwriting `ret.buttonEvents`) | **Port** | Needed so stalk events aren't clobbered |
 | P3 | same | Read `MadsSteeringMode` via lazy `openpilot` import (keeps opendbc importable standalone) | **Port** | Key exists in rx-dev |
-| P4 | same | First-drive seeding of `MadsSteeringMode = DISENGAGE` when `CarParamsPersistent` is unset | **Port** | Parity. Mutates a user param only on a never-driven device |
+| P4 | same | First-drive seeding of `MadsSteeringMode = DISENGAGE` when `CarParamsPersistent` is unset | **Dropped (D7)** | Was ported, then removed: the fork defaults to REMAIN_ACTIVE |
 | P5 | same | DOWN_2 resume-to-last-set-speed (`RivianResumeEnabled`) | **Exclude** | New param key (prebuilt constraint). Not stalk-up |
 | P6 | `selfdrive/car/car_specific.py` | Rivian branch: `altButton2` → `lkasDisable`. Suppress `pcmEnable` while UP_2 is held or in Park. Park/Reverse entry → two-frame `lkasDisable` | **Port** | Core disengage semantics |
 | P7 | same | `brakePressed` and mode PAUSE → `silentLkasDisable` every frame | **Port** | Required once P9 unlocks PAUSE for Rivian |
@@ -284,7 +285,7 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
 | B3 | Any | Fast push through UP_1 → UP_2 | **No** MADS toggle from the UP_1 transit. Lateral disengaged |
 | B4 | Any engaged state | UP_2 | `lkasDisable`. `pcmEnable` suppressed while held. No re-engage on release |
 | B5 | ACC on, steering mode DISENGAGE | UP_1 | ACC cancels natively. **No** MADS toggle (Python or panda) |
-| B5b | ACC on, steering mode REMAIN_ACTIVE or PAUSE | UP_1 | Python still emits `lkas` (→ `manualSteeringRequired`), while the panda ignores the press (`cruise_engaged_prev`). Verify there is no heartbeat-mismatch exit or EPAS fault, and that the resulting MADS state is what we intend. **Asymmetric by design. Needs explicit test coverage** |
+| B5b | ACC on, steering mode REMAIN_ACTIVE or PAUSE | UP_1 | Python still emits `lkas` (→ `manualSteeringRequired`), while the panda ignores the press (`cruise_engaged_prev`). End state: ACC **and** lateral off (`State.disabled`). The panda revokes lateral via the heartbeat check, and every EacEnabled=0 frame is accepted, so no counter gaps and no EPAS fault. **Covered:** `test_rivian_b5b_sp.py` (Python) and `test_rivian.py::test_b5b_up_1_with_acc_on_remain_active_or_pause` (panda). Confirm on road |
 | B6 | Lateral active | Shift to Park / Reverse | MADS state is `disabled` (not `paused`). No wheel motion in R/P/N |
 | B7 | Mode PAUSE, lateral active | Brake (moving and standstill) | Lateral paused for the whole press |
 | B8 | 30+ engage/disengage cycles | Mixed B1–B7 | Zero heartbeat-mismatch exits, `steerTempUnavailable` loops, or `AngleControlCntr` faults |
@@ -339,7 +340,7 @@ git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda)
 | R2 | Panda/Python MADS desync (stg-a hit this) | S2 `!cruise_engaged_prev` gate, S7 reset, B5/B8 acceptance |
 | R3 | The firmware toolchain differs from xnor's | **Mitigated (Phase 1).** The pinned wheel is the same Arm GNU Toolchain 13.2.rel1 that xnor used, and the rebuild is byte-identical modulo gitversion. CI `firmware` re-proves this on every push. Re-check after resyncs that bump `uv.lock` |
 | R4 | Two-frame `lkasDisable` hack depends on MADS state-machine ordering | Unit test B6 on device. Revisit the general `state.py` fix upstream with sunnypilot |
-| R5 | P4 seeding changes a user setting | Only on a never-driven device. Documented in the changelog |
+| R5 | P4 seeding changes a user setting | Resolved: P4 dropped (D7). Nothing in the car port writes `MadsSteeringMode` |
 | R6 | An xnor resync changes the angle stack under us | Phase 8 step 2 (I1 re-diff) |
 | R7 | Open question S6 (`0x162` in the long TX list) | Resolve during Phase 2 before porting |
 | R8 | Reverse-entry `lkasDisable` (P6) has a history: first landed as `dbbb6e066`, **reverted** (`0bd3bd3e9`) for "a loggerd error on engagement", then re-landed (`5e7b49a5a`, Aug 2026) after a road test. The drive-gear gate (P10) independently stops actuation in Reverse | During B6, watch loggerd and `onroadEvents`. If the error recurs, P10 alone still meets "no steering in Reverse". Fall back to P10 only and record the change |

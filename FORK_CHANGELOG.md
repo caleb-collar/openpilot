@@ -31,14 +31,20 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
     untouched, installer requirements, xnor angle-stack files unchanged).
 - CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `r1-xnor-adventure`, sync branches, and PRs;
   uploads firmware images and `SHA256SUMS` as artifacts).
+- B5b tests (UP_1 with ACC on, Remain Active / Pause) on both the Python and panda side, plus Rivian
+  steer-through-braking tests.
 - `py_tests.sh` + CI job `pytests`: runs the fork's openpilot-side Python tests (and upstream's MADS tests) on x86_64 by
   building host copies of `libparams_c.so` and msgq from the committed sources into a cache dir outside the tree.
 
 ### Fixed
 
-- `MadsSteeringMode` seeding now matches AdventurePilot: DISENGAGE is seeded only on a never-driven device whose mode is
-  still the stock default. The previous code called `Params.put_int()`, which does not exist, so `card` would have
-  crashed at startup on any device still on the default mode.
+- Rivian steering mode on brake defaults to **Remain Active** (steer through braking in turns); push the stalk to
+  UP_2 to fully disengage. The car port never writes `MadsSteeringMode`, so your choice in settings always wins.
+  This deviates from AdventurePilot, which seeds Disengage on a first install. The previous seeding code also called
+  `Params.put_int()`, which does not exist, so `card` would have crashed at startup on a default-mode device.
+- MADS settings no longer lock Rivian to Disengage: the port had missed AdventurePilot's UI change, so opening the
+  settings page forced `MadsSteeringMode` back to Disengage. All three modes are selectable; UEM stays forced on and
+  Toggle with Main Cruise stays forced off, as in AdventurePilot.
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
