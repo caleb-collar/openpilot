@@ -1,10 +1,10 @@
 name: fork-ci
 
-# Lightweight checks for the r1-xnor-adventure fork. Everything is scoped to commits and files
+# Lightweight checks for the GaryPilot fork. Everything is scoped to commits and files
 # after the branch root (the upstream xnor rx-dev prebuilt), so upstream content is never linted.
 on:
   push:
-    branches: [r1-xnor-adventure, r1-dev, 'feat/**', 'fix/**', 'sync/**']
+    branches: [GaryPilot, r1-xnor-adventure, r1-dev, 'feat/**', 'fix/**', 'sync/**']
   pull_request:
 
 concurrency:

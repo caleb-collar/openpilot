@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the `caleb-collar/openpilot` **r1-xnor-adventure** fork are documented in this file.
+All notable changes to the `caleb-collar/openpilot` **GaryPilot** fork are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -16,6 +16,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 - Added "GaryPilot" retro 1980s chromed gradient pixel art badge to the bottom center of the Outrun screensaver (`ScreenSaverSP`), supporting both Comma 4 and Comma 3X resolutions.
 - Updated UI home screen, settings toggles, startup alerts, device info, and setup wizards to reflect "GaryPilot" branding across Comma 4 and Comma 3X layouts.
+- Migrated primary production branch and installation target to `GaryPilot`.
 
 ## [0.1.0] - 2026-10-07
 
@@ -36,7 +37,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
     Arm GNU Toolchain 13.2.rel1, and verify committed firmware matches committed sources (byte-identical modulo gitversion).
   - `check_invariants.sh`: enforces the prebuilt-branch rules (no param-key/capnp/native changes, upstream changelogs
     untouched, installer requirements, xnor angle-stack files unchanged).
-- CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `r1-xnor-adventure`, sync branches, and PRs;
+- CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `GaryPilot`, sync branches, and PRs;
   uploads firmware images and `SHA256SUMS` as artifacts).
 - B5b tests (UP_1 with ACC on, Remain Active / Pause) on both the Python and panda side, plus Rivian
   steer-through-braking tests.
@@ -57,5 +58,5 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-xnor-adventure
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...GaryPilot
 [0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0
