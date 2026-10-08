@@ -84,11 +84,9 @@ class ScreenSaverSP(Widget):
     self.set_rect(rect)
     
     # Outrun Colors
-    bg_color = rl.Color(13, 2, 33, 255)       # Deep synthwave purple/black
-    grid_color = rl.Color(255, 0, 128, 255)   # Hot pink/magenta
-    horizon_color = rl.Color(0, 255, 255, 255) # Cyan glow
-    sun_color_top = rl.Color(255, 204, 0, 255)  # Yellow top
-    sun_color_bot = rl.Color(255, 0, 128, 255)  # Pink bottom
+    bg_color = rl.Color(13, 2, 33, 255)       
+    grid_color = rl.Color(255, 0, 128, 255)   
+    horizon_color = rl.Color(0, 255, 255, 255) 
     
     rl.clear_background(bg_color)
     
@@ -97,80 +95,54 @@ class ScreenSaverSP(Widget):
     horizon_y = h // 2
     center_x = w // 2
     
-    # Draw outrun sun (with slices)
-    sun_radius = 300 if not self._is_mici else 150
-    sun_y = horizon_y
-    num_slices = 80
-    for i in range(num_slices):
-      slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
-      
-      # Add gaps to the bottom half of the sun
-      if slice_y > horizon_y:
-        if (i // 2) % 2 == 0:  # Skip some slices to create gaps
-          continue
-      
-      # Calculate width of circle at this y
-      dy = slice_y - sun_y
-      val = sun_radius**2 - dy**2
-      if val < 0: val = 0
-      slice_w = int(math.sqrt(val))
-      if slice_w == 0:
-        continue
-      
-      # Interpolate color from yellow to pink
-      t = i / num_slices
-      r = int(sun_color_top.r + t * (sun_color_bot.r - sun_color_top.r))
-      g = int(sun_color_top.g + t * (sun_color_bot.g - sun_color_top.g))
-      b = int(sun_color_top.b + t * (sun_color_bot.b - sun_color_top.b))
-      slice_color = rl.Color(r, g, b, 255)
-      
-      # Draw the slice as a rectangle for thickness
-      rl.draw_rectangle(center_x - slice_w, slice_y, slice_w * 2, 3, slice_color)
-        
-    # Draw grid (bottom half)
-    cam_y = 5.0
-    fov = w * 0.8
-    z_far = 100.0
-    z_near = 1.0
-    
-    # Horizontal lines
-    grid_spacing = 5.0
-    for z_i in range(int(z_near), int(z_far + grid_spacing), int(grid_spacing)):
-      z = z_i - (self.grid_offset / 10.0)
-      if z < z_near: continue
-      
-      py = horizon_y + (cam_y / z) * fov
-      if py > h: continue
-      
-      f_val = 1.0 - (z / z_far)
-      if f_val < 0: f_val = 0
-      alpha = int(255 * (f_val ** 1.5))
-      line_color = rl.Color(grid_color.r, grid_color.g, grid_color.b, alpha)
-      
-      rl.draw_line(0, int(py), w, int(py), line_color)
-        
-    # Vertical lines
-    for x_i in range(-100, 100, int(grid_spacing)):
-      px1 = center_x + (x_i / z_near) * fov
-      py1 = horizon_y + (cam_y / z_near) * fov
-      px2 = center_x + (x_i / z_far) * fov
-      py2 = horizon_y + (cam_y / z_far) * fov
-      rl.draw_line(int(px1), int(py1), int(px2), int(py2), grid_color)
-
-    # Draw cyan horizon line with thickness
-
-    # Draw cyan horizon line with thickness
-    rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0, horizon_color)
-
-    # Draw the Rivian logo in the middle, sitting on the horizon
     if self.texture is not None:
+      # Logo as the Sun
       tex_w = self.texture.width
       tex_h = self.texture.height
-      scale = 2.0 if not self._is_mici else 1.0
+      scale = 5.0 if not self._is_mici else 2.5
+      
       dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(horizon_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
       source = rl.Rectangle(0.0, 0.0, float(tex_w), float(tex_h))
       
-      # We tint it BLACK to make a perfect silhouette against the bright sun
-      rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.BLACK)
+      # Tint it sunset orange/yellow
+      rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.Color(255, 204, 0, 255))
+      
+      # Draw black horizontal slices through the bottom half of the logo to make it an Outrun sun
+      sun_radius = (tex_h * scale) / 2
+      sun_y = horizon_y
+      num_slices = 80 if not self._is_mici else 40
+      for i in range(num_slices):
+        slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
+        if slice_y > horizon_y:
+          if (i // 2) % 2 != 0:  
+            rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), 4 if not self._is_mici else 2, bg_color)
+    
+    # Draw grid (bottom half)
+    num_h_lines = 30 if not self._is_mici else 20
+    spacing = 50.0 if not self._is_mici else 30.0
+    for i in range(num_h_lines):
+      f = (i + (self.grid_offset / spacing)) / num_h_lines
+      if f > 1.0: f = 1.0
+      y = horizon_y + (f ** 2) * (h - horizon_y)
+      
+      alpha = int(min(255, 255 * (f * 2.0)))
+      line_color = rl.Color(grid_color.r, grid_color.g, grid_color.b, alpha)
+      
+      rl.draw_line(0, int(y), w, int(y), line_color)
+        
+    num_v_lines = 60 if not self._is_mici else 30
+    for i in range(-num_v_lines, num_v_lines):
+      x_bottom = center_x + i * (80 if not self._is_mici else 50)
+      rl.draw_line(center_x, horizon_y, int(x_bottom), h, grid_color)
+
+    # Draw a gradient rectangle over the horizon to fade out the vertical lines smoothly
+    fog_height = 200 if not self._is_mici else 100
+    for i in range(fog_height):
+      alpha = int(255 * (1.0 - (i / fog_height)))
+      fog_color = rl.Color(bg_color.r, bg_color.g, bg_color.b, alpha)
+      rl.draw_line(0, horizon_y + i, w, horizon_y + i, fog_color)
+        
+    # Draw cyan horizon line with thickness
+    rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0 if not self._is_mici else 2.0, horizon_color)
 
     return -1
