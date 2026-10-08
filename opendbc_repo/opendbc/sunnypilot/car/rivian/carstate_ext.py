@@ -57,6 +57,12 @@ class CarStateExt:
     elif vdm != 2 and self.vdm_user_adas_request == 2:
       button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.altButton2))
 
+    # Signal UP_1 state via lkas button to toggle MADS
+    if vdm == 1 and self.vdm_user_adas_request != 1:
+      button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.lkas))
+    elif vdm != 1 and self.vdm_user_adas_request == 1:
+      button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas))
+
     self.vdm_user_adas_request = vdm
     return button_events
 
