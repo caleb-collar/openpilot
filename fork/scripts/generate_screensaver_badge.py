@@ -2,10 +2,11 @@
 """
 Programmatic generator for the GaryPilot chromed screensaver badge.
 
-Renders retro 1980s synthwave chrome typography using Audiowide font:
-- Sky reflection: Deep metallic blue -> electric cyan -> pure white horizon flash line
-- Ground reflection: Deep violet -> neon magenta / hot pink (matches perspective grid)
-- Framing: 1px crisp black outline + 2px neon magenta rim glow
+Renders large, high-legibility retro 1980s chrome/white/silver typography using Audiowide font:
+- Pure Anti-Aliasing: Clean, undistorted vector letterforms with open counters and natural geometry
+- Ethereal Soft Glow: Multi-tier luminous white & cool silver halo replacing harsh borders
+- Polished Chrome Luster: Pure white specular highlights flowing into liquid platinum and metallic silver
+- Ambient Grid Occlusion: Soft dark ambient shadow behind the glow to smoothly dim the perspective grid
 
 Usage:
   ./fork/scripts/generate_screensaver_badge.py                  # auto-detects version from git/changelog
@@ -23,7 +24,7 @@ import subprocess
 import sys
 
 try:
-  from PIL import Image, ImageDraw, ImageFont
+  from PIL import Image, ImageDraw, ImageFilter, ImageFont
 except ImportError:
   print("Error: Pillow is required to run the badge generator. Install with: pip install Pillow", file=sys.stderr)
   sys.exit(1)
@@ -38,17 +39,17 @@ def detect_version() -> str:
   # 1. Try git describe --tags
   try:
     tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"], cwd=REPO_ROOT, stderr=subprocess.DEVNULL).decode().strip()
-    if tag.startswith("r1-v"):
-      return tag.replace("r1-", "")  # e.g. v0.1.0
+    tag = re.sub(r"^r1[a-z]*-", "", tag)  # e.g. r1-v0.1.0 -> v0.1.0, r1t-v0.1.0 -> v0.1.0
     if tag.startswith("v"):
       return tag
+    return f"v{tag}"
   except Exception:
     pass
 
   # 2. Try FORK_CHANGELOG.md
   changelog_path = os.path.join(REPO_ROOT, "FORK_CHANGELOG.md")
   if os.path.exists(changelog_path):
-    with open(changelog_path, "r", encoding="utf-8") as f:
+    with open(changelog_path, encoding="utf-8") as f:
       content = f.read()
     match = re.search(r"##\s*\[(\d+\.\d+\.\d+)\]", content)
     if match:
@@ -57,97 +58,113 @@ def detect_version() -> str:
   return "v0.1.0"
 
 
-def render_chrome_badge(text: str, font_size: int = 22) -> Image.Image:
-  """Programmatically render the chromed text with gradients, outline, and glow."""
-  font = ImageFont.truetype(FONT_PATH, font_size)
+def render_chrome_badge(text: str, font_size: int = 46) -> Image.Image:
+  """Programmatically render clean anti-aliased chrome typography with an ethereal soft glow."""
+  # Supersample 2x for pristine edge anti-aliasing and smooth glow falloff
+  s = 2
+  eff_font_size = font_size * s
+  font = ImageFont.truetype(FONT_PATH, eff_font_size)
   bbox = font.getbbox(text)
-  w = bbox[2] - bbox[0] + 8
-  h = bbox[3] - bbox[1] + 8
+  pad = 20 * s
+  w = bbox[2] - bbox[0] + pad * 2
+  h = bbox[3] - bbox[1] + pad * 2
 
   mask = Image.new("L", (w, h), 0)
   d = ImageDraw.Draw(mask)
-  d.text((4 - bbox[0], 4 - bbox[1]), text, font=font, fill=255)
+  d.text((pad - bbox[0], pad - bbox[1]), text, font=font, fill=255)
 
-  mask_pix = mask.point(lambda p: 255 if p > 90 else 0)
-  real_bbox = mask_pix.getbbox()
+  real_bbox = mask.getbbox()
   if not real_bbox:
     raise ValueError(f"Empty text render for '{text}'")
 
   top, bottom = real_bbox[1], real_bbox[3]
-  mid = top + int((bottom - top) * 0.48)
+  glyph_h = max(1, bottom - top)
+  mid = top + int(glyph_h * 0.46)
 
+  # Chrome gradient: elegant silver/white
   grad = Image.new("RGBA", (w, h), (0, 0, 0, 0))
   for y in range(h):
     if y < mid:
-      t = min(1.0, max(0.0, (y - top) / float(max(1, mid - top))))
-      if t < 0.65:
-        st = t / 0.65
-        r = int(15 + st * 25)
-        g = int(35 + st * 155)
-        b = int(140 + st * 115)
+      st = (y - top) / float(max(1, mid - top))
+      if st < 0.3:
+        r = g = b = 255
+      elif st < 0.8:
+        sst = (st - 0.3) / 0.5
+        r = int(255 - sst * 50)
+        g = int(255 - sst * 45)
+        b = int(255 - sst * 35)
       else:
-        st = (t - 0.65) / 0.35
-        r = int(40 + st * 215)
-        g = int(190 + st * 65)
-        b = 255
+        sst = (st - 0.8) / 0.2
+        r = int(205 + sst * 50)
+        g = int(210 + sst * 45)
+        b = int(220 + sst * 35)
     else:
-      t = min(1.0, max(0.0, (y - mid) / float(max(1, bottom - mid))))
-      # Neon Magenta bottom gradient (Outrun grid reflection)
-      if t < 0.4:
-        st = t / 0.4
-        r = int(70 + st * 110)
-        g = int(10 + st * 10)
-        b = int(120 + st * 30)
+      st = (y - mid) / float(max(1, bottom - mid))
+      if st < 0.25:
+        sst = st / 0.25
+        r = int(120 + sst * 30)
+        g = int(125 + sst * 30)
+        b = int(140 + sst * 30)
+      elif st < 0.75:
+        sst = (st - 0.25) / 0.50
+        r = int(150 + sst * 85)
+        g = int(155 + sst * 85)
+        b = int(170 + sst * 75)
       else:
-        st = (t - 0.4) / 0.6
-        r = int(180 + st * 75)
-        g = int(20 + st * 100)
-        b = int(150 + st * 50)
+        sst = (st - 0.75) / 0.25
+        r = int(235 + sst * 20)
+        g = int(240 + sst * 15)
+        b = int(245 + sst * 10)
 
     for x in range(w):
       grad.putpixel((x, y), (r, g, b, 255))
 
-  chrome_text = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-  chrome_text.paste(grad, (0, 0), mask_pix)
+  chrome_body = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+  chrome_body.paste(grad, (0, 0), mask)
 
-  final_img = Image.new("RGBA", (w + 6, h + 6), (0, 0, 0, 0))
+  final_img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
 
-  # 1. Outer Neon Magenta Rim Glow (matching Outrun grid)
-  for dy in range(-2, 3):
-    for dx in range(-2, 3):
-      if abs(dx) == 2 or abs(dy) == 2:
-        final_img.paste(Image.new("RGBA", (w, h), (255, 0, 128, 120)), (3 + dx, 3 + dy), mask_pix)
+  # 1. Ambient dark drop shadow behind the glow to smoothly dim the perspective grid
+  shadow_mask = mask.filter(ImageFilter.GaussianBlur(radius=8 * s))
+  shadow_layer = Image.new("RGBA", (w, h), (10, 2, 25, 200))
+  final_img.paste(shadow_layer, (0, 0), shadow_mask)
 
-  # 2. Dark Outline
-  for dy in [-1, 0, 1]:
-    for dx in [-1, 0, 1]:
-      if dx == 0 and dy == 0:
-        continue
-      final_img.paste(Image.new("RGBA", (w, h), (10, 2, 25, 255)), (3 + dx, 3 + dy), mask_pix)
+  # 2. Multi-tier Soft Luminous Glow (no harsh borders!)
+  # Broad soft atmospheric halo
+  halo_mask = mask.filter(ImageFilter.GaussianBlur(radius=6 * s))
+  halo_layer = Image.new("RGBA", (w, h), (225, 240, 255, 120))
+  final_img.paste(halo_layer, (0, 0), halo_mask)
 
-  # 3. Chrome Body
-  final_img.paste(chrome_text, (3, 3), chrome_text)
+  # Tight intense inner glow right at the edges of the glyphs
+  tight_mask = mask.filter(ImageFilter.GaussianBlur(radius=2 * s))
+  tight_layer = Image.new("RGBA", (w, h), (255, 255, 255, 180))
+  final_img.paste(tight_layer, (0, 0), tight_mask)
 
-  # 4. White Horizon Flash Line
-  for x in range(w):
-    if mask_pix.getpixel((x, mid - 1)) > 0:
-      final_img.putpixel((3 + x, 3 + mid - 1), (255, 255, 255, 255))
-      if mask_pix.getpixel((x, mid - 2)) > 0:
-        final_img.putpixel((3 + x, 3 + mid - 2), (235, 255, 255, 255))
+  # 3. Clean Chrome Body (Pristine anti-aliased typography)
+  final_img.paste(chrome_body, (0, 0), mask)
 
-  return final_img
+  # Downsample with Lanczos for razor-clean smooth typography
+  target_w = w // s
+  target_h = h // s
+  return final_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+
+def generate_badge_png_bytes(version_str: str) -> bytes:
+  """Generate PNG bytes directly for programmatic runtime use."""
+  text = f"GaryPilot {version_str}"
+  img = render_chrome_badge(text, font_size=46)
+  buf = io.BytesIO()
+  img.save(buf, format="PNG", optimize=True)
+  return buf.getvalue()
 
 
 def generate_badge_base64(version_str: str) -> str:
-  text = f"GaryPilot {version_str}"
-  img = render_chrome_badge(text, font_size=22)
-  buf = io.BytesIO()
-  img.save(buf, format="PNG", optimize=True)
-  return base64.b64encode(buf.getvalue()).decode("utf-8")
+  """Generate base64 encoded PNG of the badge."""
+  return base64.b64encode(generate_badge_png_bytes(version_str)).decode("utf-8")
 
 
 def update_screen_saver(b64_string: str) -> bool:
-  with open(SCREEN_SAVER_PY, "r", encoding="utf-8") as f:
+  with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
     lines = f.readlines()
 
   changed = False
@@ -178,7 +195,7 @@ def main():
   b64_str = generate_badge_base64(version)
 
   if args.check:
-    with open(SCREEN_SAVER_PY, "r", encoding="utf-8") as f:
+    with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
       content = f.read()
     if f'GARYPILOT_LOGO_B64 = "{b64_str}"' in content:
       print(f"[✓] Badge in screen_saver.py matches version: {version}")

@@ -14,8 +14,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ### Added
 
-- Added programmatic badge generator script (`fork/scripts/generate_screensaver_badge.py`) that renders retro 1980s chrome typography with embedded version number (e.g. `GaryPilot v0.1.0`), auto-detecting git release tags, updating `screen_saver.py`, and supporting `--check` mode for CI.
-- Updated screensaver badge bottom gradient to vibrant Neon Magenta (`#ff0080` to `#9400d3`) for crisp contrast against wireframe mountain silhouettes.
+- Updated GaryPilot screensaver badge with enlarged, clean anti-aliased chrome typography and an ethereal soft luminous glow: rendered at font size 46 with 2x supersampling for pristine vector letterforms with natural geometry, brilliant white and metallic silver fill, multi-tier soft white/silver halo (replacing the previous hard border), and a soft ambient drop shadow to smoothly dim perspective grid lines behind the text.
+- Enhanced screensaver badge generation: programmatic Audiowide font and version rendering now runs dynamically at runtime in `screen_saver.py` when Pillow is available, with seamless fallback to pre-rendered embedded base64 assets (`generate_screensaver_badge.py`) for minimal and headless device environments.
 - Restored authentic Rivian compass emblem bytes to the screensaver retro sun with clean PNG headers and exact 92x91 active bounding box within 128x128 canvas, eliminating sky blowout and preserving starry night views on Comma 4 and Comma 3X.
 - Added legal IP & trademark protections: updated `LICENSE.md` with explicit exclusions for visual assets and UI themes, added trademark disclosures in `README.md`, and disassociated internal logo asset filenames and variable names (`r_logo`).
 - Documented full installer URL (`https://installer.comma.ai/caleb-collar/GaryPilot`), shorthand slug (`caleb-collar/GaryPilot`), case-sensitivity requirements, and on-device/SSH branch switching instructions across `README.md` and `INTEGRATION_PLAN.md`.
