@@ -35,17 +35,11 @@ class CarStateExt:
 
     # lazy openpilot imports: opendbc must stay importable standalone (safety test suite)
     from openpilot.common.params import Params
-    from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param
-    # First-ever drive on this device: seed the Rivian default of DISENGAGE.
-    # CarParamsPersistent is written by card.py AFTER the CarInterface (and so this constructor) is built, and it has
-    # no registered default, so manager_init's "fill unset params with their default" loop never touches it. It is
-    # therefore unset only on a device that has never completed a drive, which is the one moment we can be sure the
-    # user has never had a MadsSteeringMode to lose. Also guarded on the value still being the stock default, so a
-    # choice made in settings while parked, before that first drive, is not overwritten either.
-    params = Params()
-    if params.get("CarParamsPersistent") is None and params.get("MadsSteeringMode", return_default=True) == MadsSteeringModeOnBrake.REMAIN_ACTIVE:
-      params.put("MadsSteeringMode", MadsSteeringModeOnBrake.DISENGAGE, block=True)
-    self.steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, params)
+    from openpilot.sunnypilot.mads.helpers import read_steering_mode_param
+    # Fork decision (deviates from AdventurePilot, which seeds DISENGAGE on a first install): the Rivian default is the
+    # stock MadsSteeringMode default, REMAIN_ACTIVE, so lateral steers through braking in turns. Pushing the stalk to
+    # UP_2 is the reliable full disengage. Never write this param here: the user's choice in settings always wins.
+    self.steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, Params())
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp = can_parsers[Bus.pt]
