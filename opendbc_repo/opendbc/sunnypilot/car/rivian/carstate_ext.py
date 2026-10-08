@@ -35,13 +35,14 @@ class CarStateExt:
 
     # Lazy import Params to avoid breaking standalone opendbc import
     from openpilot.common.params import Params
+    from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param
     params = Params()
 
     # First-drive seeding of MadsSteeringMode to DISENGAGE
-    if params.get("CarParamsPersistent") is None:
-      params.put("MadsSteeringMode", "2")
+    if params.get("MadsSteeringMode", return_default=True) == MadsSteeringModeOnBrake.REMAIN_ACTIVE:
+      params.put_int("MadsSteeringMode", MadsSteeringModeOnBrake.DISENGAGE)
 
-    self.steering_mode_on_brake = int(params.get("MadsSteeringMode", block=False) or 0)
+    self.steering_mode_on_brake = read_steering_mode_param(self.CP, self.CP_SP, params)
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp = can_parsers[Bus.pt]
