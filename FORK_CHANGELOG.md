@@ -10,16 +10,12 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 > The root `CHANGELOG.md` is upstream sunnypilot's changelog. The device parses it at runtime
 > for release notes, so this fork leaves it unchanged.
 
-## [Unreleased]
+## [0.1.0] - 2026-10-07
 
 ### Added
 
 - Added a custom Outrun/Synthwave retro screensaver (`ScreenSaverSP`) featuring a 3D perspective neon grid, starry night sky, wireframe mountains, and a glowing Rivian logo sunset.
 - Optimized screensaver UI rendering performance (reduced overdraw by replacing 200 alpha lines with a single gradient rectangle, improving mobile GPU fill-rate efficiency on the comma 4).
-
-## [r1-v0.1.0] - 2026-10-07
-
-### Added
 
 - Fork infrastructure on top of `xnor-tech/openpilot` `rx-dev` prebuilt `8a627abb0`:
   fork README, this changelog, `CONTRIBUTING.md`, and the integration plan (`INTEGRATION_PLAN.md`, revision 2).
@@ -37,4 +33,5 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `r1-xnor-adventure`, sync branches, and PRs;
   uploads firmware images and `SHA256SUMS` as artifacts).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/commits/r1-xnor-adventure
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-xnor-adventure
+[0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0

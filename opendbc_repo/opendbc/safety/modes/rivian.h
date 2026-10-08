@@ -2,6 +2,8 @@
 
 #include "opendbc/safety/declarations.h"
 
+static uint8_t rivian_prev_user_adas_request = 0U;
+
 static uint8_t rivian_get_counter(const CANPacket_t *msg) {
   // Signal: ESP_Status_Counter, VDM_PropStatus_Counter, VDM_AdasSts_Counter
   return msg->data[1] & 0xFU;
@@ -75,7 +77,6 @@ static void rivian_rx_hook(const CANPacket_t *msg) {
 
     // VDM_AdasSts: stalk position — used to manage MADS lateral state
     if (msg->addr == 0x162U) {
-      static uint8_t rivian_prev_user_adas_request = 0U;
       const uint8_t user_adas_request = msg->data[7] & 0x7U;
 
       // UP_1 (value 1) is the MADS toggle gesture. Drive mads_button_press so
@@ -207,6 +208,7 @@ static safety_config rivian_init(uint16_t param) {
   };
 
   bool rivian_longitudinal = false;
+  rivian_prev_user_adas_request = 0U;
 
   SAFETY_UNUSED(param);
   #ifdef ALLOW_DEBUG

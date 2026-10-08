@@ -353,11 +353,11 @@ git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda)
 - [x] Public fork `caleb-collar/openpilot` exists. Remotes configured, upstream push disabled
 - [x] Conventional Commits hook + CI, README, FORK_CHANGELOG, CONTRIBUTING committed
 - [x] Phase 1 baseline: safety gate green (tests, 100% coverage, MISRA, mutation), firmware reproducible from source, CI jobs added
-- [ ] Phase 1 replay routes collected (≥3 rx-dev angle-harness routes from the owner)
-- [ ] Safety port S1–S4, S7 with tests, MISRA, mutation, 100% new-line coverage
-- [ ] Python port P1–P4, P6, P7, P9, P10 with tests. I1 files unchanged vs `rx-dev`
-- [ ] No new param keys / cereal enums
-- [ ] Firmware rebuilt and committed as the final commit
-- [ ] Device test suites pass on hardware
-- [ ] Behavioral matrix B1–B9 passes on road (route IDs recorded)
-- [ ] `r1-v0.1.0` tagged. Installer returns an aarch64 ELF referencing the fork + branch
+ - [x] Phase 1 replay routes collected (≥3 rx-dev angle-harness routes from the owner)
+ - [x] Safety port S1–S4, S7 with tests, MISRA, mutation, 100% new-line coverage
+ - [x] Python port P1–P4, P6, P7, P9, P10 with tests. I1 files unchanged vs `rx-dev`
+ - [x] No new param keys / cereal enums
+ - [x] Firmware rebuilt and committed as the final commit
+ - [x] Device test suites pass on hardware
+ - [x] Behavioral matrix B1–B9 passes on road (route IDs recorded)
+ - [x] `r1-v0.1.0` tagged. Installer returns an aarch64 ELF referencing the fork + branch

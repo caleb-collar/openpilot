@@ -65,7 +65,7 @@ class CarSpecificEventsSP:
           self._rivian_up2_active = be.pressed
           if be.pressed:
             events_sp.add(EventNameSP.lkasDisable)
-            
+
       if in_park and not self._rivian_prev_in_park:
         events_sp.add(EventNameSP.lkasDisable)
         self._rivian_park_disable_pending = True
@@ -75,7 +75,7 @@ class CarSpecificEventsSP:
       if not in_park:
         self._rivian_park_disable_pending = False
       self._rivian_prev_in_park = in_park
-      
+
       in_reverse = CS.gearShifter == GearShifter.reverse
       if in_reverse and not self._rivian_prev_in_reverse:
         events_sp.add(EventNameSP.lkasDisable)
@@ -86,7 +86,7 @@ class CarSpecificEventsSP:
       if not in_reverse:
         self._rivian_reverse_disable_pending = False
       self._rivian_prev_in_reverse = in_reverse
-      
+
       if self._rivian_up2_active or in_park:
         events.remove(EventName.pcmEnable)
 

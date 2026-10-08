@@ -99,7 +99,6 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
     self.__class__.cnt_speed_2 += 1
     return self.packer.make_can_msg_safety("VDM_PropStatus", 0, values, fix_checksum=checksum)
 
-  
   def _lkas_button_msg(self, req):
     values = {"VDM_UserAdasRequest": req, "VDM_AdasStatus_Counter": self.cnt_adas % 15}
     self.__class__.cnt_adas += 1
@@ -186,7 +185,6 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
       }
       self.assertTrue(self._tx(self.packer.make_can_msg_safety("SCCM_WheelTouch", 2, values)))
 
-  
   def test_mads_button_gated_on_cruise(self):
     for cruise in (False, True):
       self._rx(self._pcm_status_msg(1 if cruise else 0))
@@ -197,6 +195,9 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
 
   def test_mads_button_up_2_suppression(self):
     self._rx(self._lkas_button_msg(2))
+    self.assertEqual(self.safety.get_mads_button_press(), 0)
+    # sending UP_1 immediately after UP_2 should be suppressed
+    self._rx(self._lkas_button_msg(1))
     self.assertEqual(self.safety.get_mads_button_press(), 0)
     self._rx(self._lkas_button_msg(0))
 

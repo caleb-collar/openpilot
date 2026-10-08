@@ -7,6 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 import os
 import time
 import base64
+import math
 
 import pyray as rl
 
@@ -106,8 +107,6 @@ class ScreenSaverSP(Widget):
         # We can't easily use time in C++ raylib random seed loops predictably unless we pass time,
         # so we'll just draw them static or use simple flickering based on x pos and monotonic time
         if rl.get_random_value(0, 5) == 0:
-            import math
-            import time
             alpha = int(127 + 127 * math.sin(time.monotonic() * 5.0 + sx))
 
         rl.draw_circle(sx, sy, float(size), rl.Color(255, 255, 255, alpha))
