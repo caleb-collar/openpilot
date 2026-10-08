@@ -95,27 +95,91 @@ class ScreenSaverSP(Widget):
     horizon_y = h // 2
     center_x = w // 2
     
+    # Draw Stars
+    rl.set_random_seed(1234)
+    num_stars = 80 if not self._is_mici else 40
+    for _ in range(num_stars):
+        sx = rl.get_random_value(0, w)
+        sy = rl.get_random_value(0, horizon_y - 50)
+        size = rl.get_random_value(1, 2)
+        alpha = rl.get_random_value(100, 255)
+        
+        # We can't easily use time in C++ raylib random seed loops predictably unless we pass time, 
+        # so we'll just draw them static or use simple flickering based on x pos and monotonic time
+        if rl.get_random_value(0, 5) == 0:
+            import math
+            import time
+            alpha = int(127 + 127 * math.sin(time.monotonic() * 5.0 + sx))
+            
+        rl.draw_circle(sx, sy, float(size), rl.Color(255, 255, 255, alpha))
+        
+        if rl.get_random_value(0, 15) == 0:
+            rl.draw_line(sx - 6, sy, sx + 6, sy, rl.Color(255, 255, 255, alpha))
+            rl.draw_line(sx, sy - 6, sx, sy + 6, rl.Color(255, 255, 255, alpha))
+
     if self.texture is not None:
       # Logo as the Sun
       tex_w = self.texture.width
       tex_h = self.texture.height
-      scale = 5.0 if not self._is_mici else 2.5
+      scale = 6.5 if not self._is_mici else 3.5
       
       dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(horizon_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
       source = rl.Rectangle(0.0, 0.0, float(tex_w), float(tex_h))
       
+      # Add a glow behind the sun using transparent circles
+      glow_radius = int((tex_w * scale) * 0.6)
+      for r_idx in range(25):
+          r = glow_radius * (1.0 - (r_idx / 25.0))
+          g_alpha = int(100 * (r_idx / 25.0))
+          rl.draw_circle(center_x, horizon_y, r, rl.Color(255, 100, 0, g_alpha))
+      
       # Tint it sunset orange/yellow
       rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.Color(255, 204, 0, 255))
       
-      # Draw black horizontal slices through the bottom half of the logo to make it an Outrun sun
+      # Draw black horizontal slices through the bottom half of the logo
       sun_radius = (tex_h * scale) / 2
       sun_y = horizon_y
-      num_slices = 80 if not self._is_mici else 40
+      num_slices = 100 if not self._is_mici else 50
       for i in range(num_slices):
         slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
         if slice_y > horizon_y:
           if (i // 2) % 2 != 0:  
             rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), 4 if not self._is_mici else 2, bg_color)
+    
+    # Draw Mountains
+    rl.set_random_seed(42)
+    curr_x = -100
+    peaks = []
+    while curr_x < w + 200:
+        curr_x += rl.get_random_value(100, 300)
+        dist_from_center = abs(curr_x - center_x)
+        max_height = 100 + int((dist_from_center / (w/2)) * 150)
+        peaks.append((curr_x, horizon_y - rl.get_random_value(30, max_height)))
+        
+    px = -100
+    py = horizon_y
+    for cx, cy in peaks:
+        rl.draw_triangle(
+            rl.Vector2(float(px), float(horizon_y)),
+            rl.Vector2(float(px), float(py)),
+            rl.Vector2(float(cx), float(horizon_y)),
+            bg_color
+        )
+        rl.draw_triangle(
+            rl.Vector2(float(px), float(py)),
+            rl.Vector2(float(cx), float(cy)),
+            rl.Vector2(float(cx), float(horizon_y)),
+            bg_color
+        )
+        
+        # Mountain internal wireframe lines
+        if rl.get_random_value(0, 1) == 0:
+            rl.draw_line_ex(rl.Vector2(float(cx), float(cy)), rl.Vector2(float(cx), float(horizon_y)), 2.0, rl.Color(grid_color.r, grid_color.g, grid_color.b, 100))
+        
+        # Mountain Outline
+        rl.draw_line_ex(rl.Vector2(float(px), float(py)), rl.Vector2(float(cx), float(cy)), 3.0, grid_color)
+        px = cx
+        py = cy
     
     # Draw grid (bottom half)
     num_h_lines = 30 if not self._is_mici else 20
