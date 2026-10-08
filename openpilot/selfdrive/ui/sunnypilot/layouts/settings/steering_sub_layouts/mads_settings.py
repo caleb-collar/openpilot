@@ -32,6 +32,11 @@ STATUS_CHECK_COMPATIBILITY = tr("Start the vehicle to check vehicle compatibilit
 DEFAULT_TO_OFF = tr("This feature defaults to OFF, and does not allow selection due to vehicle limitations.")
 DEFAULT_TO_ON = tr("This feature defaults to ON, and does not allow selection due to vehicle limitations.")
 STATUS_DISENGAGE_ONLY = tr("This platform only supports Disengage mode due to vehicle limitations.")
+# Brand-specific policy sets keep UI restrictions extensible:
+# a platform can force UEM on, force Main Cruise off, or do both without
+# coupling those behaviours together in brand-specific control flow.
+UEM_FORCED_ON_BRANDS = {"rivian"}
+MAIN_CRUISE_FORCED_OFF_BRANDS = {"rivian"}
 
 
 class MadsSettingsLayout(Widget):
@@ -85,6 +90,17 @@ class MadsSettingsLayout(Widget):
 
   @staticmethod
   def _mads_limited_settings() -> bool:
+    brand = MadsSettingsLayout._get_brand()
+
+    if brand == "tesla":
+      if ui_state.CP_SP is None or not ui_state.CP_SP.flags & TeslaFlagsSP.HAS_VEHICLE_BUS:
+        return True
+      screen_button = int(ui_state.params.get("TeslaMadsScreenButton", return_default=True))
+      return screen_button == MadsScreenButtonType.OFF
+    return False
+
+  @staticmethod
+  def _get_brand() -> str:
     brand = ""
     if ui_state.is_offroad():
       bundle = ui_state.params.get("CarPlatformBundle")
@@ -93,14 +109,15 @@ class MadsSettingsLayout(Widget):
     if not brand:
       brand = ui_state.CP.brand if ui_state.CP is not None else ""
 
-    if brand == "rivian":
-      return True
-    elif brand == "tesla":
-      if ui_state.CP_SP is None or not ui_state.CP_SP.flags & TeslaFlagsSP.HAS_VEHICLE_BUS:
-        return True
-      screen_button = int(ui_state.params.get("TeslaMadsScreenButton", return_default=True))
-      return screen_button == MadsScreenButtonType.OFF
-    return False
+    return brand
+
+  @staticmethod
+  def _uem_forced_on() -> bool:
+    return MadsSettingsLayout._get_brand() in UEM_FORCED_ON_BRANDS
+
+  @staticmethod
+  def _main_cruise_forced_off() -> bool:
+    return MadsSettingsLayout._get_brand() in MAIN_CRUISE_FORCED_OFF_BRANDS
 
   def _update_steering_mode_description(self, button_index: int):
     base_desc = tr("Choose how Automatic Lane Centering (ALC) behaves after the brake pedal is manually pressed in sunnypilot.")
@@ -130,11 +147,23 @@ class MadsSettingsLayout(Widget):
       self._steering_mode.action_item.set_selected_button(MadsSteeringModeOnBrake.DISENGAGE)
       self._steering_mode.action_item.set_enabled_buttons({MadsSteeringModeOnBrake.DISENGAGE})
     else:
-      self._main_cruise_toggle.action_item.set_enabled(True)
-      self._main_cruise_toggle.set_description(MADS_MAIN_CRUISE_BASE_DESC)
-
-      self._unified_engagement_toggle.action_item.set_enabled(True)
-      self._unified_engagement_toggle.set_description(MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC)
-
       self._steering_mode.action_item.set_enabled(True)
       self._steering_mode.action_item.set_enabled_buttons(None)
+
+      if self._main_cruise_forced_off():
+        ui_state.params.put_bool("MadsMainCruiseAllowed", False)
+        self._main_cruise_toggle.action_item.set_enabled(False)
+        self._main_cruise_toggle.action_item.set_state(False)
+        self._main_cruise_toggle.set_description("<b>" + DEFAULT_TO_OFF + "</b><br>" + MADS_MAIN_CRUISE_BASE_DESC)
+      else:
+        self._main_cruise_toggle.action_item.set_enabled(True)
+        self._main_cruise_toggle.set_description(MADS_MAIN_CRUISE_BASE_DESC)
+
+      if self._uem_forced_on():
+        ui_state.params.put_bool("MadsUnifiedEngagementMode", True)
+        self._unified_engagement_toggle.action_item.set_enabled(False)
+        self._unified_engagement_toggle.action_item.set_state(True)
+        self._unified_engagement_toggle.set_description("<b>" + DEFAULT_TO_ON + "</b><br>" + MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC)
+      else:
+        self._unified_engagement_toggle.action_item.set_enabled(True)
+        self._unified_engagement_toggle.set_description(MADS_UNIFIED_ENGAGEMENT_MODE_BASE_DESC)
