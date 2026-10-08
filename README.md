@@ -19,13 +19,18 @@ A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilo
 | Custom Outrun Screensaver (optimized for Comma 4) | ✅ |
 | Releases | Released! See [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md) |
 
-### Planned stalk behavior
+### Stalk & Vehicle Behavior
 
-| Gesture | Effect |
+| Action / Event | Behavior |
 |---|---|
 | Stalk **up, first detent** (UP_1) with ACC off | Toggle MADS lateral (lateral-only "Mode B") |
-| Stalk **up, past detent** (UP_2) | Fully disengage lateral. Engagement is blocked while held |
-| Shift to **Park** / **Reverse** | Disengage lateral. No steering actuation outside Drive |
+| Stalk **up, first detent** (UP_1) with ACC on | Cancels stock ACC and cleanly disengages MADS lateral (B5b) |
+| Stalk **up, past detent** (UP_2) | Fully disengages lateral and longitudinal. Engagement blocked while held |
+| Press stalk **Park** button | Disengages controls and immediately transitions Comma 4 to **Offroad mode** (screensaver, fans idle) |
+| Shift to **Drive** or **Reverse** | Immediately wakes Comma 4 into **Onroad mode** |
+| Shift to **Reverse** while active | Disengages lateral control. No steering actuation outside Drive |
+| **Brake pedal** in turns | Steers through braking by default (`Remain Active` mode); settings unlocked |
+| **Fight wheel** past EPAS limit | Rivian EPAS override detection triggers immediate comma lateral disengage with audible chime |
 
 ## Installation
 

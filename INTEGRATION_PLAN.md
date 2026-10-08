@@ -30,6 +30,7 @@
 | D5 | `r1-xnor-adventure` is fast-forward-only from tested branches | Installed devices auto-update from it |
 | D6 | Port by hand, reading `stg-a-src` commit history. Use the prebuilt diff only as a cross-check | No shared history. Source commits carry rationale, tests, and route IDs |
 | D7 | **Rivian default steering mode is REMAIN_ACTIVE** (steer through braking). P4 is dropped: `MadsSteeringMode` is never written by the car port, so the stock param default applies (owner decision, deviates from stg-a) | Lateral should hold the line through a braking turn. Pushing the stalk to UP_2 is the reliable full disengage. B5b (UP_1 with ACC on) is then the common path, so it has explicit Python and panda tests |
+| D8 | **Rivian CAN ignition tracks PRNDL (`0x150 VDM_PropStatus`)** alongside EPAS power mode (`0x152`). Park immediately transitions CAN ignition to false, cleanly entering offroad mode (owner decision) | In installations with an auxiliary fuse tap (e.g. F33), the vehicle remains awake for 15-30+ minutes while parked, keeping the device onroad. Tying CAN ignition to gear ensures immediate offroad in Park (screensaver, fans spin down, logs close) and immediate onroad wake-up in Drive/Reverse |
 
 ---
 
@@ -290,6 +291,9 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
 | B7 | Mode PAUSE, lateral active | Brake (moving and standstill) | Lateral paused for the whole press |
 | B8 | 30+ engage/disengage cycles | Mixed B1–B7 | Zero heartbeat-mismatch exits, `steerTempUnavailable` loops, or `AngleControlCntr` faults |
 | B9 | Angle harness | Low-speed maneuvers | Smoothing/feel matches `rx-dev` (no shudder or hunting) |
+| B10 | Any onroad state | Push stalk Park button | Vehicle shifts to Park (`VDM_Prndl_Status = 1`). Comma 4 immediately drops CAN ignition and enters Offroad mode (screensaver, fans spin down, drive logs close) |
+| B11 | Offroad in Park | Shift to Drive / Reverse | Vehicle shifts to D/R (`VDM_Prndl_Status = 4/2`). Panda immediately asserts CAN ignition, waking Comma 4 onroad within ~2 seconds |
+| B12 | Angle steering active | Driver fights wheel past limit | Rivian EPAS error 12 (`EPAS_Hands_On_Detn_Err`) triggers `steerDisengage` (`ET.USER_DISABLE`), immediately disengaging comma lateral control with audible chime |
 
 ### Phase 6: Release & Installer Validation
 1. Promote to `r1-xnor-adventure` (see §5). Move `[Unreleased]` → `[0.1.0]` in `FORK_CHANGELOG.md`, tag `r1-v0.1.0`, then push the branch and tag.

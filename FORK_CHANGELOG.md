@@ -36,6 +36,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `py_tests.sh` + CI job `pytests`: runs the fork's openpilot-side Python tests (and upstream's MADS tests) on x86_64 by
   building host copies of `libparams_c.so` and msgq from the committed sources into a cache dir outside the tree.
 - PRNDL-aware CAN ignition for Rivian R1: CAN ignition evaluates PRNDL gear status (`0x150 VDM_PropStatus`) alongside EPAS power mode. Pushing the Park button on the stalk immediately transitions CAN ignition to false, allowing the comma to enter offroad mode (showing the screensaver, spinning down fans, and closing the drive log) instead of staying awake indefinitely on auxiliary fuse power. Shifting into Drive or Reverse immediately restores CAN ignition and wakes openpilot back onroad.
+- Driver fighting / override protection: verified and tested that Rivian EPAS error 12 (`EPAS_Hands_On_Detn_Err`) triggers `steerDisengage` (`ET.USER_DISABLE`), immediately disengaging comma lateral control with audible chime; regression test added in `test_rivian_b5b_sp.py` (`TestRivianDriverOverrideDisengage`).
 
 ### Fixed
 
