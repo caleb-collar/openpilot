@@ -22,6 +22,8 @@ class MadsSteeringModeOnBrake:
 
 
 def get_mads_limited_brands(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params: Params) -> bool:
+  # Rivian is deliberately absent from this list. Upstream restricts it to DISENGAGE-only, but our
+  # Rivian MADS port has consistent engage/disengage signals, so the full steering-mode choice applies.
   if CP.brand == 'tesla':
     if not CP_SP.flags & TeslaFlagsSP.HAS_VEHICLE_BUS:
       return True

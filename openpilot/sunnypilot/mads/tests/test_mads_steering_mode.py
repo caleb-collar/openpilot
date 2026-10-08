@@ -214,13 +214,16 @@ class TestLateralMismatchCounter(OpenpilotTestCase):
 # brand restrictions
 
 class TestBrandSteeringModeRestrictions(OpenpilotTestCase):
-  def test_rivian_forced_to_disengage(self, mocker):
+  def test_rivian_uses_the_user_steering_mode(self, mocker):
+    # Fork (AdventurePilot parity): Rivian is not a limited brand. The gear-stalk MADS port has
+    # consistent engage/disengage signals, so the user's MadsSteeringMode applies as-is.
     CP = structs.CarParams()
     CP.brand = "rivian"
     CP_SP = structs.CarParamsSP()
     params = mocker.MagicMock()
-    assert read_steering_mode_param(CP, CP_SP, params) == MadsSteeringModeOnBrake.DISENGAGE
-    params.get.assert_not_called()
+    params.get.return_value = MadsSteeringModeOnBrake.PAUSE
+    assert read_steering_mode_param(CP, CP_SP, params) == MadsSteeringModeOnBrake.PAUSE
+    params.get.assert_called_once_with("MadsSteeringMode", return_default=True)
 
   def test_tesla_without_vehicle_bus_forced_to_disengage(self, mocker):
     CP = structs.CarParams()
