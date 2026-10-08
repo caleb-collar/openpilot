@@ -26,7 +26,7 @@ class ScreenSaverSP(Widget):
 
     # Save the base64 Rivian logo to tmp so we can load it as a texture
     self.logo_path = "/tmp/rivian_logo_screensaver.png"
-    b64_logo = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAEBUlEQVR4nO3dUW+jQBADYOfU//+X04cTEqoSEmBmxx6PpXtqWLb4EyF0wz2ezycmvvlXPYFJbQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeX6qJ1CUd8ugHktnQRA3AJ/Wv20/t4HgAuDswkcbCA7XAHdWvbZfMdsdQESBrRF0BhBZXFsEXQFkFNYSQUcAmUW1Q9ANwIqCWiHoBGBlMW0QdAFQUUgLBB0AVBYhj0AdAEMBDHO4HGUATAeeaS6nogog6oA/EHe/XxKBIoCIA/23+CgIcgjUANw9wJ+KjoAghUAJQET5Ga99FRkEKgBWln9nm30kECgAqCg/YltAAAE7gJXlZ60TpEbADCCj/Ofu37t9vvpZWwSsALLKv7P/lggYAVSXf7RNOwRsAFjKP9q2FQImAGzlH43RBgELANbyj8ZqgYABAHv5R2PKI6gGoFL+0djSCCoBqJV/tA9ZBFUAVMs/2pckggoA6uUf7VMOwWoAXco/2rcUgpUAupW/RRrBKgBdy98ii2AFAMbyX42ZURg9gmwAKuV/87NvIocgE4Ba+WdecxQpBFkAVMu/8tpXkUGQAUC9/Dvb7COBIBpA5QLOjDHZ5gMEI4gEkFX+nXEjCrwzBv1C0+q/Bm5hLT9iLOqnkjIAYDzNKo95bgLE/3v41YllH1TWeV0KwxlgUpgBYB5mAFdPmfOcwBOJfFo4yxU78H8uGWNeDe2nHJYzQMZHpexl4d8mo/ywRAKgubkRPCbjvMLObtFngG73z7v8XeNtMt4CuiBoXz6Qdw2gjsCifCD3IlAVgU35QP6nADUEVuUDaz4GqiCwKx9Ydx+AEUFkJMsH1t4I6opAtnyA507gt2FDwP6FlY9ZDSDrgcwVCLLKX/q7VJwBOiBoUT5Q9xagjKBN+UDtNYAiglblA/UXgUoI2pUP1AMANBC0LB/gAABwI2hbPsADAOBE0Lp8gAsAwIWgffkAHwCAA4FF+QAnAKAWgU35APdXwwCOA88wh7SwngG2ZJ0JVmy7hbZ8gB8AUIegffmABgBgPQKL8gEdAEAcgk9rAm3KB7QAAHEH9lXRUVfDMuUDsV8OXZUH4sqK/ggkVT6gdwbYwnigGef0MaoAAK4DzjSXU1EGAHAceIY5XI46AIBvVbBUOgAAeFYFy6ULAKB+VbBkOgEA6lYFy6YbAGD9qmDpdAQANH2sa0YU7wR+m60wmS9qVqTrGWCf6EWhreIAADhf5OPCNpLp/BbwN/tCqZ/hvzJOAPaxK/pdXN4CJm8yAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMzzC6004gUSWLKnAAAAAElFTkSuQmCC"
+    b64_logo = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAEBUlEQVR4nO3dUW+jQBADYOfU//+X04cTEqoSEmBmxx6PpXtqWLb4EyF0wz2ezycmvvlXPYFJbQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeX6qJ1CUd8ugHktnQRA3AJ/Wv20/t4HgAuDswkcbCA7XAHdWvbZfMdsdQESBrRF0BhBZXFsEXQFkFNYSQUcAmUW1Q9ANwIqCWiHoBGBlMW0QdAFQUUgLBB0AVBYhj0AdAEMBDHO4HGUATAeeaS6nogog6oA/EHe/XxKBIoCIA/23+CgIcgjUANw9wJ+KjoAghUAJQET5Ga99FRkEKgBWln9nm30kECgAqCg/YltAAAE7gJXlZ60TpEbADCCj/Ofu37t9vvpZWwSsALLKv7P/lggYAVSXf7RNOwRsAFjKP9q2FQImAGzlH43RBgELANbyj8ZqgYABAHv5R2PKI6gGoFL+0djSCCoBqJV/tA9ZBFUAVMs/2pckggoA6uUf7VMOwWoAXco/2rcUgpUAupW/RRrBKgBdy98ii2AFAMbyX42ZURg9gmwAKuV/87NvIocgE4Ba+WdecxQpBFkAVMu/8tpXkUGQAUC9/Dvb7COBIBpA5QLOjDHZ5gMEI4gEkFX+nXEjCrwzBv1C0+q/Bm5hLT9iLOqnkjIAYDzNKo95bgLE/3v41YllH1TWeV0KwxlgUpgBYB5mAFdPmfOcwBOJfFo4yxU78H8uGWNeDe2nHJYzQMZHpexl4d8mo/ywRAKgubkRPCbjvMLObtFngG73z7v8XeNtMt4CuiBoXz6Qdw2gjsCifCD3IlAVgU35QP6nADUEVuUDaz4GqiCwKx9Ydx+AEUFkJMsH1t4I6opAtnyA507gt2FDwP6FlY9ZDSDrgcwVCLLKX/q7VJwBOiBoUT5Q9xagjKBN+UDtNYAiglblA/UXgUoI2pUP1AMANBC0LB/gAABwI2hbPsADAOBE0Lp8gAsAwIWgffkAHwCAA4FF+QAnAKAWgU35APdXwwCOA88wh7SwngG2ZJ0JVmy7hbZ8gB8AUIegffmABgBgPQKL8gEdAEAcgk9rAm3KB7QAAHEH9lXRUVfDMuUDsV8OXZUH4sqK/ggkVT6gdwbYwnigGef0MaoAAK4DzjSXU1EGAHAceIY5XI46AIBvVbBUOgAAeFYFy6ULAKB+VbBkOgEA6lYFy6YbAGD9qmDpdAQANH2sa0YU7wR+m60wmS9qVqTrGWCf6EWhreIAADhf5OPCNpLp/BbwN/tCqZ/hvzJOAPaxK/pdXN4CJm8yAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMzzC6004gUSWLKnAAAAAElFTkSuQmCC"
     if not os.path.exists(self.logo_path):
       with open(self.logo_path, "wb") as f:
         f.write(base64.b64decode(b64_logo))
@@ -54,7 +54,7 @@ class ScreenSaverSP(Widget):
       self._start_time = time.monotonic()
     self._dismiss = False
     if self.texture is None:
-      self.texture = rl.load_texture(self.logo_path.encode('utf-8'))
+      self.texture = rl.load_texture(self.logo_path)
 
   def hide_event(self):
     super().hide_event()
@@ -128,25 +128,36 @@ class ScreenSaverSP(Widget):
       rl.draw_rectangle(center_x - slice_w, slice_y, slice_w * 2, 3, slice_color)
         
     # Draw grid (bottom half)
-    num_h_lines = 30
-    spacing = 50.0
-    for i in range(num_h_lines):
-      # Quadratic spacing for 3D perspective effect
-      f = (i + (self.grid_offset / spacing)) / num_h_lines
-      if f > 1.0: f = 1.0
-      y = horizon_y + (f ** 2) * (h - horizon_y)
+    cam_y = 5.0
+    fov = w * 0.8
+    z_far = 100.0
+    z_near = 1.0
+    
+    # Horizontal lines
+    grid_spacing = 5.0
+    for z_i in range(int(z_near), int(z_far + grid_spacing), int(grid_spacing)):
+      z = z_i - (self.grid_offset / 10.0)
+      if z < z_near: continue
       
-      # Fade out lines near the horizon
-      alpha = int(min(255, 255 * (f * 2.0)))
+      py = horizon_y + (cam_y / z) * fov
+      if py > h: continue
+      
+      f_val = 1.0 - (z / z_far)
+      if f_val < 0: f_val = 0
+      alpha = int(255 * (f_val ** 1.5))
       line_color = rl.Color(grid_color.r, grid_color.g, grid_color.b, alpha)
       
-      rl.draw_line(0, int(y), w, int(y), line_color)
+      rl.draw_line(0, int(py), w, int(py), line_color)
         
-    # Vertical lines (diverging from center)
-    num_v_lines = 40
-    for i in range(-num_v_lines, num_v_lines):
-      x_bottom = center_x + i * 120
-      rl.draw_line(center_x, horizon_y, int(x_bottom), h, grid_color)
+    # Vertical lines
+    for x_i in range(-100, 100, int(grid_spacing)):
+      px1 = center_x + (x_i / z_near) * fov
+      py1 = horizon_y + (cam_y / z_near) * fov
+      px2 = center_x + (x_i / z_far) * fov
+      py2 = horizon_y + (cam_y / z_far) * fov
+      rl.draw_line(int(px1), int(py1), int(px2), int(py2), grid_color)
+
+    # Draw cyan horizon line with thickness
 
     # Draw cyan horizon line with thickness
     rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0, horizon_color)
