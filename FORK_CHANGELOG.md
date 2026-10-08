@@ -1,10 +1,10 @@
 # Changelog
 
-All notable changes to the `caleb-collar/openpilot` **r1t-xnor-adventure** fork are documented in this file.
+All notable changes to the `caleb-collar/openpilot` **r1-xnor-adventure** fork are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-Fork versions are tagged `r1t-vX.Y.Z` and are independent of the upstream sunnypilot version
+Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypilot version
 (`openpilot/sunnypilot/common/version.h`).
 
 > The root `CHANGELOG.md` is upstream sunnypilot's changelog. The device parses it at runtime
@@ -17,7 +17,7 @@ Fork versions are tagged `r1t-vX.Y.Z` and are independent of the upstream sunnyp
 - Added a custom Outrun/Synthwave retro screensaver (`ScreenSaverSP`) featuring a 3D perspective neon grid, starry night sky, wireframe mountains, and a glowing Rivian logo sunset.
 - Optimized screensaver UI rendering performance (reduced overdraw by replacing 200 alpha lines with a single gradient rectangle, improving mobile GPU fill-rate efficiency on the comma 4).
 
-## [r1t-v0.1.0] - 2026-10-07
+## [r1-v0.1.0] - 2026-10-07
 
 ### Added
 
@@ -34,7 +34,7 @@ Fork versions are tagged `r1t-vX.Y.Z` and are independent of the upstream sunnyp
     Arm GNU Toolchain 13.2.rel1, and verify committed firmware matches committed sources (byte-identical modulo gitversion).
   - `check_invariants.sh`: enforces the prebuilt-branch rules (no param-key/capnp/native changes, upstream changelogs
     untouched, installer requirements, xnor angle-stack files unchanged).
-- CI jobs `invariants`, `safety`, and `firmware` (strict on `r1t-dev`, `r1t-xnor-adventure`, sync branches, and PRs;
+- CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `r1-xnor-adventure`, sync branches, and PRs;
   uploads firmware images and `SHA256SUMS` as artifacts).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/commits/r1t-xnor-adventure
+[Unreleased]: https://github.com/caleb-collar/openpilot/commits/r1-xnor-adventure

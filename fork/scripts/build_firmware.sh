@@ -8,13 +8,13 @@
 #
 # Usage: fork/scripts/build_firmware.sh [--ref <rev>] [--out <dir>] [--verify] [--install]
 #   --ref      git revision to build (default: HEAD)
-#   --out      where to copy built artifacts (default: $TMPDIR/r1t-fw-<sha>)
+#   --out      where to copy built artifacts (default: $TMPDIR/r1-fw-<sha>)
 #   --verify   exit 1 unless the committed firmware at <rev> is reproduced from <rev>'s sources
 #              (byte-identical modulo the embedded gitversion; see fork/scripts/fw_compare.py)
 #   --install  copy built artifacts into ./panda/board/obj (plan Phase 4). Requires --ref HEAD
 #              and no uncommitted changes outside panda/board/obj
 #
-# Env: FORK_FW_VENV  toolchain venv (default: ~/.cache/r1t-fork/fw-venv)
+# Env: FORK_FW_VENV  toolchain venv (default: ~/.cache/r1-fork/fw-venv)
 #      CERT/RELEASE  refused; builds are always debug-signed (plan §2.2)
 set -euo pipefail
 
@@ -41,7 +41,7 @@ fi
 
 SHA="$(git -C "$REPO" rev-parse --verify "$REF^{commit}")"
 SHORT="$(git -C "$REPO" rev-parse --short=8 "$SHA")"
-OUT="${OUT:-${TMPDIR:-/tmp}/r1t-fw-$SHORT}"
+OUT="${OUT:-${TMPDIR:-/tmp}/r1-fw-$SHORT}"
 PROJECTS=(panda_h7 panda_jungle_h7 body_h7)
 ARTIFACTS=()
 for p in "${PROJECTS[@]}"; do
@@ -60,7 +60,7 @@ fi
 
 # *** toolchain ***
 command -v uv >/dev/null || { echo "error: uv is required (see CONTRIBUTING.md)" >&2; exit 2; }
-VENV="${FORK_FW_VENV:-$HOME/.cache/r1t-fork/fw-venv}"
+VENV="${FORK_FW_VENV:-$HOME/.cache/r1-fork/fw-venv}"
 REQ="$(mktemp)"
 python3 "$REPO/fork/scripts/fw_requirements.py" > "$REQ"
 if [[ ! -x "$VENV/bin/python" ]]; then
@@ -71,7 +71,7 @@ rm -f "$REQ"
 export PATH="$VENV/bin:$PATH"
 
 # *** isolated sparse worktree ***
-WT="$(mktemp -d "${TMPDIR:-/tmp}/r1t-fw-wt.XXXXXX")"
+WT="$(mktemp -d "${TMPDIR:-/tmp}/r1-fw-wt.XXXXXX")"
 cleanup() { git -C "$REPO" worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"; }
 trap cleanup EXIT
 git -C "$REPO" worktree add -q --detach --no-checkout "$WT" "$SHA"

@@ -1,10 +1,10 @@
 name: fork-ci
 
-# Lightweight checks for the r1t-xnor-adventure fork. Everything is scoped to commits and files
+# Lightweight checks for the r1-xnor-adventure fork. Everything is scoped to commits and files
 # after the branch root (the upstream xnor rx-dev prebuilt), so upstream content is never linted.
 on:
   push:
-    branches: [r1t-xnor-adventure, r1t-dev, 'feat/**', 'fix/**', 'sync/**']
+    branches: [r1-xnor-adventure, r1-dev, 'feat/**', 'fix/**', 'sync/**']
   pull_request:
 
 concurrency:
@@ -103,7 +103,7 @@ jobs:
     name: Panda firmware reproducible from sources
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    # Strict on r1t-dev, the device branch, sync branches, and PRs. Advisory on feat/fix branches,
+    # Strict on r1-dev, the device branch, sync branches, and PRs. Advisory on feat/fix branches,
     # where safety sources may be ahead of the final build(panda) commit (plan Phase 4).
     continue-on-error: ${{ startsWith(github.ref, 'refs/heads/feat/') || startsWith(github.ref, 'refs/heads/fix/') }}
     steps:

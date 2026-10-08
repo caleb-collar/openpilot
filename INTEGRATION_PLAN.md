@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Plan revision | 2.2 (2026-10-07) |
-| Target | `caleb-collar/openpilot` @ `r1t-xnor-adventure` |
+| Target | `caleb-collar/openpilot` @ `r1-xnor-adventure` |
 | Upstream base | `xnor-tech/openpilot` @ `rx-dev` → `8a627abb0` ("openpilot rx-dev prebuilt") |
 | Upstream source (reference) | `xnor-tech/openpilot` @ `rx-new-src` → `406a1bc09` ("Rivian: angle control"). Its Rivian, safety, and MADS code matches `rx-dev` except for one MISRA suppression comment in `mads.h` |
 | Feature source (prebuilt) | `AdventurePilotDev/openpilot` @ `stg-a` → `f5e525279` |
@@ -16,7 +16,7 @@
 
 ## Status & Next Step (for a fresh session)
 
-* **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). Phase 1 steps 1–4 and 6: sudo-free toolchain, baseline safety gate green, firmware reproduced from source, CI jobs for both (see [Phase 1 baseline](#phase-1-baseline-results-2026-10-07)). Work happens on `r1t-dev`. The device branch `r1t-xnor-adventure` is fast-forwarded from it only after review.
+* **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). Phase 1 steps 1–4 and 6: sudo-free toolchain, baseline safety gate green, firmware reproduced from source, CI jobs for both (see [Phase 1 baseline](#phase-1-baseline-results-2026-10-07)). Work happens on `r1-dev`. The device branch `r1-xnor-adventure` is fast-forwarded from it only after review.
 * **Blocked on the owner:** Phase 1 step 5. Supply **at least 3 rx-dev angle-harness routes** (comma connect route IDs, made public, or downloaded `rlog`s) that contain UP_1/UP_2 stalk presses, Park/Reverse shifts, and ACC on/off. A stock upstream route is not representative (§0 #18).
 * **Next:** Phase 2 (v0.1 Python Port). Run `git fetch adventure stg-a-src` and read the source commits in §2.6 first. We will implement the fail-safe Python-only disengage logic first.
 * **Setup for a fresh clone:** install `uv` (see `fork/README.md`), then `fork/scripts/safety_tests.sh --quick` and `fork/scripts/build_firmware.sh --verify`.
@@ -29,7 +29,7 @@
 | D2 | Fork log in `FORK_CHANGELOG.md`. Root `CHANGELOG.md` untouched (owner decision) | The root file is parsed on the device for release notes and is overwritten on every resync |
 | D3 | Do not port stg-a's torque-limit increase or angle-stack changes | Invariants I1 and I4 |
 | D4 | No new param keys or cereal enums. Features that need them are excluded | Prebuilt binaries can't be rebuilt (§2.2) |
-| D5 | `r1t-xnor-adventure` is fast-forward-only from tested branches | Installed devices auto-update from it |
+| D5 | `r1-xnor-adventure` is fast-forward-only from tested branches | Installed devices auto-update from it |
 | D6 | Port by hand, reading `stg-a-src` commit history. Use the prebuilt diff only as a cross-check | No shared history. Source commits carry rationale, tests, and route IDs |
 
 ---
@@ -39,7 +39,7 @@
 | # | Revision 1 assumption | Reality (verified) | Correction |
 |---|---|---|---|
 | 1 | `opendbc_repo` is a git submodule; commit inside it and bump the pointer | No `.gitmodules`. `rx-dev` is a **vendored, single-commit, orphan prebuilt tree** and `opendbc_repo/` is plain tracked files | Removed submodule phase. Edit files in place |
-| 2 | `r1t-xnor-adventure` can be merged and diffed against `stg-a` normally | `rx-dev` and `stg-a` are **orphan prebuilt commits with no merge base**. They diverge across 1,530 files (different sunnypilot snapshots) | **Never merge or cherry-pick `stg-a`.** Port by hand from an explicit [port manifest](#26-stg-a-port-manifest) |
+| 2 | `r1-xnor-adventure` can be merged and diffed against `stg-a` normally | `rx-dev` and `stg-a` are **orphan prebuilt commits with no merge base**. They diverge across 1,530 files (different sunnypilot snapshots) | **Never merge or cherry-pick `stg-a`.** Port by hand from an explicit [port manifest](#26-stg-a-port-manifest) |
 | 3 | UP_1 → `ButtonType.lkas` gives "disengagement" | `ButtonType.lkas` is a **toggle** in MADS (`openpilot/sunnypilot/mads/mads.py:174`). It also *engages*. stg-a only makes this safe by patching **panda safety firmware** (`rivian.h`) | Scope now includes the panda safety port, a firmware rebuild, and panda↔Python MADS consistency invariants |
 | 4 | Pure-Python change | The prebuilt ships aarch64 `.so`s and **debug-signed panda firmware** (`DEV-ff8d7d84-DEBUG`) | Added toolchain, firmware rebuild, and artifact-commit phases. Documented what can and cannot change on a prebuilt |
 | 5 | stg-a's Rivian files can be taken wholesale | stg-a's `rivian.h` also **raises torque limits** (350→385). Its `carstate.py` **removes** rx-dev's long-rejection loopback and changes non-harness fault semantics. It also adds params and cereal enums that rx-dev lacks | Per-hunk Port / Adapt / Exclude decisions. Hard rule: no new param keys and no cereal schema changes |
@@ -188,7 +188,7 @@ Discovery command: `git log --oneline adventure/stg-a-src -- <path>`. Use `git l
 ## 3. Comma Installer Compatibility
 
 1. The repository must be `caleb-collar/openpilot` and **public**. ✅ (fork created)
-2. The branch name equals the URL slug: `r1t-xnor-adventure`.
+2. The branch name equals the URL slug: `r1-xnor-adventure`.
 3. `launch_openpilot.sh` is at the root with mode `100755`. ✅ (verified in the index)
 4. The `prebuilt` marker stays present, and all runtime binaries are committed.
 5. No LFS pointers. No file is 100 MB or larger. ✅ (largest is 58 MB)
@@ -201,10 +201,10 @@ Discovery command: `git log --oneline adventure/stg-a-src -- <path>`. Use `git l
 ### Phase 0: Repository Bootstrap ✅ (this revision)
 - [x] Fork `xnor-tech/openpilot` → `caleb-collar/openpilot` (public, default branch only).
 - [x] Remotes: `origin`/`upstream`/`adventure`. Push disabled on `upstream` and `adventure`.
-- [x] Working branch `r1t-xnor-adventure` rooted at `rx-dev` `8a627abb0`.
+- [x] Working branch `r1-xnor-adventure` rooted at `rx-dev` `8a627abb0`.
 - [x] Conventional Commits: `.githooks/commit-msg`, enabled per clone with `git config core.hooksPath .githooks`.
 - [x] Docs: `README.md` (fork), `FORK_CHANGELOG.md`, `CONTRIBUTING.md`, this plan.
-- [x] CI: `.github/workflows/fork-ci.yml` (commit lint and Python checks on fork-touched files). Actions enabled on the fork. `r1t-xnor-adventure` set as the default branch.
+- [x] CI: `.github/workflows/fork-ci.yml` (commit lint and Python checks on fork-touched files). Actions enabled on the fork. `r1-xnor-adventure` set as the default branch.
 
 ### Phase 1: Toolchain & Baseline (no source changes)
 1. [x] Install host tools. **No sudo** (§0 #16): host `gcc`/`gcov` plus a checksum-verified per-user `uv` (`fork/README.md`). `uv` provides Python 3.12, `cppcheck` (opendbc lock), and `scons` + Arm GNU Toolchain 13.2.rel1 (root lock, via `fork/scripts/fw_requirements.py`).
@@ -218,7 +218,7 @@ Exit criteria: baseline tests green ✅, firmware builds reproducibly ✅, at le
 
 #### Phase 1 baseline results (2026-10-07)
 
-Tree: `r1t-xnor-adventure` @ `8321693ab` (rx-dev `8a627abb0` + docs/CI only). Host: Ubuntu 26.04, gcc 15.2, 16 cores.
+Tree: `r1-xnor-adventure` @ `8321693ab` (rx-dev `8a627abb0` + docs/CI only). Host: Ubuntu 26.04, gcc 15.2, 16 cores.
 
 | Check | Result |
 |---|---|
@@ -238,7 +238,7 @@ Tree: `r1t-xnor-adventure` @ `8321693ab` (rx-dev `8a627abb0` + docs/CI only). Ho
 
 ### Phase 2: Python Port (v0.1 Staged Rollout)
 This phase implements **only** the fail-safe disengage logic in Python. It does not touch the Panda firmware.
-1. Create branch `feat/v0.1-python-disengage` from `r1t-dev`.
+1. Create branch `feat/v0.1-python-disengage` from `r1-dev`.
 2. Apply P1–P4, P6, P7, P9, P10. Preserve I1 (diff `carstate.py`, `ext_controller.py`, `carcontroller.py` against `rx-dev`. The expected delta is empty. `check_invariants.sh` enforces this).
 3. Hard guard (CI-checkable): no new `Params` keys and no cereal enums outside what `rx-dev` defines. File-level guards already exist in `check_invariants.sh`. Add a key-usage scan for fork-touched Python here.
 4. Keep `opendbc` importable without `openpilot` (lazy imports only).
@@ -263,7 +263,7 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
 7. Introduce the UP_1 lateral toggle logic back into the Python files (`carstate_ext.py`).
 
 > [!IMPORTANT]
-> Push to `r1t-dev` only together with the final `build(panda)` commit. On `r1t-dev`, the device branch, and PRs, CI fails if committed firmware doesn't match the safety sources.
+> Push to `r1-dev` only together with the final `build(panda)` commit. On `r1-dev`, the device branch, and PRs, CI fails if committed firmware doesn't match the safety sources.
 
 ### Phase 4: Firmware Rebuild & Artifact Commit (v0.2)
 1. With all source commits in place and a clean tree: `fork/scripts/build_firmware.sh --install`. This builds from `HEAD` (debug cert only, and it refuses `RELEASE`/`CERT`), then copies the artifacts into `panda/board/obj/`.
@@ -293,17 +293,17 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
 | B9 | Angle harness | Low-speed maneuvers | Smoothing/feel matches `rx-dev` (no shudder or hunting) |
 
 ### Phase 6: Release & Installer Validation
-1. Promote to `r1t-xnor-adventure` (see §5). Move `[Unreleased]` → `[0.1.0]` in `FORK_CHANGELOG.md`, tag `r1t-v0.1.0`, then push the branch and tag.
+1. Promote to `r1-xnor-adventure` (see §5). Move `[Unreleased]` → `[0.1.0]` in `FORK_CHANGELOG.md`, tag `r1-v0.1.0`, then push the branch and tag.
 2. Validate the installer (the UA is required, and the payload is an aarch64 ELF):
    ```bash
-   curl -sS -A "AGNOSSetup-16.0" -o /tmp/installer https://installer.comma.ai/caleb-collar/r1t-xnor-adventure
+   curl -sS -A "AGNOSSetup-16.0" -o /tmp/installer https://installer.comma.ai/caleb-collar/r1-xnor-adventure
    file /tmp/installer                       # expect: ELF 64-bit ... ARM aarch64
-   strings /tmp/installer | grep -E 'github.com/caleb-collar/openpilot|r1t-xnor-adventure'
+   strings /tmp/installer | grep -E 'github.com/caleb-collar/openpilot|r1-xnor-adventure'
    ```
 
 ### Phase 7: Device Onboarding (comma 3X / comma four)
 1. Settings → Software → **Uninstall** (both UIs set `DoUninstall`). The device reboots into setup.
-2. Choose **Custom Software** and enter `caleb-collar/r1t-xnor-adventure`.
+2. Choose **Custom Software** and enter `caleb-collar/r1-xnor-adventure`.
 3. First boot: `pandad` reflashes the panda with the fork firmware. Expect a brief panda reset.
 4. Run B1–B9.
 5. **Rollback:** reinstall `xnor-tech/rx-dev` the same way. `pandad` flashes rx-dev's firmware back automatically.
@@ -312,22 +312,22 @@ This phase implements the Panda firmware support for the UP_1 toggle, allowing P
 When xnor publishes a new `rx-dev` prebuilt (a force-pushed orphan):
 ```bash
 git fetch upstream rx-dev
-old_base=$(git rev-list --max-parents=0 r1t-xnor-adventure)
-git switch -c sync/rx-dev-$(date +%Y%m%d) r1t-xnor-adventure
+old_base=$(git rev-list --max-parents=0 r1-xnor-adventure)
+git switch -c sync/rx-dev-$(date +%Y%m%d) r1-xnor-adventure
 git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda) commit as "drop"; Phase 4 regenerates it
 ```
 1. Resolve source conflicts. **Never resolve binary conflicts by picking a side.** Regenerate firmware (Phase 4: `build_firmware.sh --install`, then `--verify`). Before rebasing, run `build_firmware.sh --ref upstream/rx-dev --verify` to confirm the new upstream firmware is itself reproducible with the pinned toolchain.
 2. Re-diff the I1 files against the new `rx-dev`. Re-run the full Phase 5 matrix.
 3. Add a `Changed: rebased onto xnor-tech/rx-dev <sha>` entry to `FORK_CHANGELOG.md`.
-4. Promote with `git push --force-with-lease origin sync/...:r1t-xnor-adventure`. On-device `updated` handles force-pushed branches (fetch + hard reset).
+4. Promote with `git push --force-with-lease origin sync/...:r1-xnor-adventure`. On-device `updated` handles force-pushed branches (fetch + hard reset).
 
 ---
 
 ## 5. Branching & Commit Conventions
 
 * **Conventional Commits** for every fork commit (enforced by hook and CI). Types: `feat fix docs style refactor perf test build ci chore revert`. Common scopes: `rivian`, `safety`, `mads`, `panda`, `sync`, `docs`, `ci`. Full guide: [`CONTRIBUTING.md`](CONTRIBUTING.md).
-* `r1t-xnor-adventure` is the **device branch**: installed cars auto-update from it. Only verified work lands there.
-* Develop on `feat/<topic>` / `fix/<topic>` branches, or on the integration branch `r1t-dev`. Promote to `r1t-xnor-adventure` by fast-forward only after the Phase 5 matrix passes.
+* `r1-xnor-adventure` is the **device branch**: installed cars auto-update from it. Only verified work lands there.
+* Develop on `feat/<topic>` / `fix/<topic>` branches, or on the integration branch `r1-dev`. Promote to `r1-xnor-adventure` by fast-forward only after the Phase 5 matrix passes.
 * History stays linear (rebase, no merge commits). The firmware artifact commit is always last.
 * Every user-visible change gets a `FORK_CHANGELOG.md` entry under `[Unreleased]`.
 
@@ -362,4 +362,4 @@ git rebase -i --onto upstream/rx-dev "$old_base"   # mark the final build(panda)
 - [ ] Firmware rebuilt and committed as the final commit
 - [ ] Device test suites pass on hardware
 - [ ] Behavioral matrix B1–B9 passes on road (route IDs recorded)
-- [ ] `r1t-v0.1.0` tagged. Installer returns an aarch64 ELF referencing the fork + branch
+- [ ] `r1-v0.1.0` tagged. Installer returns an aarch64 ELF referencing the fork + branch

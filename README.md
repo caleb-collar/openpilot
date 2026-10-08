@@ -1,6 +1,6 @@
-# openpilot: Rivian R1T (`r1t-xnor-adventure`)
+# openpilot: Rivian R1T & R1S (`r1-xnor-adventure`)
 
-A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilot fork for the **Rivian R1T**. It combines:
+A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilot fork for the **Rivian R1T & R1S**. It combines:
 
 * **xnor-tech [`rx-dev`](https://github.com/xnor-tech/openpilot/tree/rx-dev)**: angle-based lateral control through the angle harness, plus low-speed oscillation smoothing.
 * **AdventurePilot [`stg-a`](https://github.com/AdventurePilotDev/openpilot/tree/stg-a)** gear-stalk MADS semantics: an upward stalk flick toggles or disengages lateral control, and lateral control disengages in Park and Reverse. Includes the matching panda safety support.
@@ -28,20 +28,20 @@ A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilo
 
 ## Installation
 
-Supported hardware: **comma 3X** and **comma four**, in a Rivian R1T with the angle harness.
+Supported hardware: **comma 3X** and **comma four**, in a Rivian R1T/R1S with the angle harness.
 
 1. On the device: **Settings → Software → Uninstall**. The device reboots into setup.
 2. Choose **Custom Software** and enter:
    ```
-   caleb-collar/r1t-xnor-adventure
+   caleb-collar/r1-xnor-adventure
    ```
-   (equivalent to `https://installer.comma.ai/caleb-collar/r1t-xnor-adventure`)
+   (equivalent to `https://installer.comma.ai/caleb-collar/r1-xnor-adventure`)
 3. On first boot the panda is reflashed with this branch's firmware.
 
 **Rollback:** repeat the steps with `xnor-tech/rx-dev`. The panda firmware is restored automatically.
 
 > [!IMPORTANT]
-> Installed devices auto-update from `r1t-xnor-adventure`. Only verified changes are promoted to that branch.
+> Installed devices auto-update from `r1-xnor-adventure`. Only verified changes are promoted to that branch.
 
 ## Repository Layout & Remotes
 
