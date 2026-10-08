@@ -6,13 +6,14 @@ See the LICENSE.md file in the root directory for more details.
 """
 import os
 import time
+import base64
+import math
 
 import pyray as rl
 
 from openpilot.common.hardware import HARDWARE
 from openpilot.common.params import Params
-from openpilot.system.ui.lib.application import gui_app, FontWeight
-from openpilot.system.ui.lib.text_measure import measure_text_cached
+from openpilot.system.ui.lib.application import gui_app
 from openpilot.system.ui.widgets import Widget
 
 
@@ -23,19 +24,21 @@ class ScreenSaverSP(Widget):
     self._params = params or Params()
     self._is_mici = HARDWARE.get_device_type() == 'mici' or (HARDWARE.get_device_type() == "pc" and os.getenv("BIG") != "1")
 
-    self.x = 0.0
-    self.y = 100.0
-    self.vx = 120.0 if self._is_mici else 300.0
-    self.vy = 70.0 if self._is_mici else 200.0
-    self._hue = 150
-    self.color = rl.color_from_hsv(self._hue, 1, 1)
-
-    self.text = "sunnypilot"
-    self.font_size = 50 if self._is_mici else 200
+    # Save the base64 Rivian logo to tmp so we can load it as a texture
+    self.logo_path = "/tmp/rivian_logo_screensaver.png"
+    b64_logo = "iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAEBUlEQVR4nO3dUW+jQBADYOfU//+X04cTEqoSEmBmxx6PpXtqWLb4EyF0wz2ezycmvvlXPYFJbQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeQaAeX6qJ1CUd8ugHktnQRA3AJ/Wv20/t4HgAuDswkcbCA7XAHdWvbZfMdsdQESBrRF0BhBZXFsEXQFkFNYSQUcAmUW1Q9ANwIqCWiHoBGBlMW0QdAFQUUgLBB0AVBYhj0AdAEMBDHO4HGUATAeeaS6nogog6oA/EHe/XxKBIoCIA/23+CgIcgjUANw9wJ+KjoAghUAJQET5Ga99FRkEKgBWln9nm30kECgAqCg/YltAAAE7gJXlZ60TpEbADCCj/Ofu37t9vvpZWwSsALLKv7P/lggYAVSXf7RNOwRsAFjKP9q2FQImAGzlH43RBgELANbyj8ZqgYABAHv5R2PKI6gGoFL+0djSCCoBqJV/tA9ZBFUAVMs/2pckggoA6uUf7VMOwWoAXco/2rcUgpUAupW/RRrBKgBdy98ii2AFAMbyX42ZURg9gmwAKuV/87NvIocgE4Ba+WdecxQpBFkAVMu/8tpXkUGQAUC9/Dvb7COBIBpA5QLOjDHZ5gMEI4gEkFX+nXEjCrwzBv1C0+q/Bm5hLT9iLOqnkjIAYDzNKo95bgLE/3v41YllH1TWeV0KwxlgUpgBYB5mAFdPmfOcwBOJfFo4yxU78H8uGWNeDe2nHJYzQMZHpexl4d8mo/ywRAKgubkRPCbjvMLObtFngG73z7v8XeNtMt4CuiBoXz6Qdw2gjsCifCD3IlAVgU35QP6nADUEVuUDaz4GqiCwKx9Ydx+AEUFkJMsH1t4I6opAtnyA507gt2FDwP6FlY9ZDSDrgcwVCLLKX/q7VJwBOiBoUT5Q9xagjKBN+UDtNYAiglblA/UXgUoI2pUP1AMANBC0LB/gAABwI2hbPsADAOBE0Lp8gAsAwIWgffkAHwCAA4FF+QAnAKAWgU35APdXwwCOA88wh7SwngG2ZJ0JVmy7hbZ8gB8AUIegffmABgBgPQKL8gEdAEAcgk9rAm3KB7QAAHEH9lXRUVfDMuUDsV8OXZUH4sqK/ggkVT6gdwbYwnigGef0MaoAAK4DzjSXU1EGAHAceIY5XI46AIBvVbBUOgAAeFYFy6ULAKB+VbBkOgEA6lYFy6YbAGD9qmDpdAQANH2sa0YU7wR+m60wmS9qVqTrGWCf6EWhreIAADhf5OPCNpLp/BbwN/tCqZ/hvzJOAPaxK/pdXN4CJm8yAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMwzAMzzC6004gUSWLKnAAAAAElFTkSuQmCC"
+    if not os.path.exists(self.logo_path):
+      with open(self.logo_path, "wb") as f:
+        f.write(base64.b64decode(b64_logo))
+    
+    self.texture = None
     self._start_time = None
     self._dismiss = False
     self._screensaver_timeout = 300
-    self._hit_last_frame = False
+    
+    # Outrun variables
+    self.grid_offset = 0.0
+    self.grid_speed = 40.0 if self._is_mici else 80.0
 
   @property
   def is_active(self) -> bool:
@@ -50,6 +53,8 @@ class ScreenSaverSP(Widget):
     if self._start_time is None:
       self._start_time = time.monotonic()
     self._dismiss = False
+    if self.texture is None:
+      self.texture = rl.load_texture(self.logo_path.encode('utf-8'))
 
   def hide_event(self):
     super().hide_event()
@@ -65,54 +70,96 @@ class ScreenSaverSP(Widget):
   def _update_state(self):
     super()._update_state()
 
-    self.font = gui_app.font(FontWeight.AUDIOWIDE)
-    text_size = measure_text_cached(self.font, self.text, self.font_size, 0)
-    self.logo_width = text_size.x
-    self.logo_height = text_size.y
-
     if self._start_time and time.monotonic() - self._start_time > self._screensaver_timeout:
       self._dismiss = True
       self._start_time = None
 
     dt = rl.get_frame_time()
-
-    self.x += self.vx * dt
-    self.y += self.vy * dt
-
-    hit_x = hit_y = False
-    if self.x + self.logo_width > self.rect.width:
-      self.vx *= -1
-      self.x = self.rect.width - self.logo_width
-      hit_x = True
-    elif self.x < 0:
-      self.vx *= -1
-      self.x = 0
-      hit_x = True
-
-    if self.y + self.logo_height > self.rect.height:
-      self.vy *= -1
-      self.y = self.rect.height - self.logo_height
-      hit_y = True
-    elif self.y < 0:
-      self.vy *= -1
-      self.y = 0
-      hit_y = True
-
-    hit = hit_x or hit_y
-    if hit and not self._hit_last_frame:
-      while self._hue_dist((new_hue := rl.get_random_value(0, 360)), self._hue) < 120:
-        pass
-      self._hue = new_hue
-      self.color = rl.color_from_hsv(self._hue, 1, 1)
-    self._hit_last_frame = hit
-
-  @staticmethod
-  def _hue_dist(a, b):
-    d = abs(a - b)
-    return min(d, 360 - d)
+    self.grid_offset += self.grid_speed * dt
+    # Wrap offset around spacing for infinite loop effect
+    if self.grid_offset > 50.0:
+      self.grid_offset -= 50.0
 
   def _render(self, rect: rl.Rectangle):
     self.set_rect(rect)
-    rl.clear_background(rl.BLACK)
-    rl.draw_text_ex(self.font, self.text, rl.Vector2(int(self.x), int(self.y)), self.font_size, 0, self.color)
+    
+    # Outrun Colors
+    bg_color = rl.Color(13, 2, 33, 255)       # Deep synthwave purple/black
+    grid_color = rl.Color(255, 0, 128, 255)   # Hot pink/magenta
+    horizon_color = rl.Color(0, 255, 255, 255) # Cyan glow
+    sun_color_top = rl.Color(255, 204, 0, 255)  # Yellow top
+    sun_color_bot = rl.Color(255, 0, 128, 255)  # Pink bottom
+    
+    rl.clear_background(bg_color)
+    
+    w = int(self.rect.width)
+    h = int(self.rect.height)
+    horizon_y = h // 2
+    center_x = w // 2
+    
+    # Draw outrun sun (with slices)
+    sun_radius = 300 if not self._is_mici else 150
+    sun_y = horizon_y
+    num_slices = 80
+    for i in range(num_slices):
+      slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
+      
+      # Add gaps to the bottom half of the sun
+      if slice_y > horizon_y:
+        if (i // 2) % 2 == 0:  # Skip some slices to create gaps
+          continue
+      
+      # Calculate width of circle at this y
+      dy = slice_y - sun_y
+      val = sun_radius**2 - dy**2
+      if val < 0: val = 0
+      slice_w = int(math.sqrt(val))
+      if slice_w == 0:
+        continue
+      
+      # Interpolate color from yellow to pink
+      t = i / num_slices
+      r = int(sun_color_top.r + t * (sun_color_bot.r - sun_color_top.r))
+      g = int(sun_color_top.g + t * (sun_color_bot.g - sun_color_top.g))
+      b = int(sun_color_top.b + t * (sun_color_bot.b - sun_color_top.b))
+      slice_color = rl.Color(r, g, b, 255)
+      
+      # Draw the slice as a rectangle for thickness
+      rl.draw_rectangle(center_x - slice_w, slice_y, slice_w * 2, 3, slice_color)
+        
+    # Draw grid (bottom half)
+    num_h_lines = 30
+    spacing = 50.0
+    for i in range(num_h_lines):
+      # Quadratic spacing for 3D perspective effect
+      f = (i + (self.grid_offset / spacing)) / num_h_lines
+      if f > 1.0: f = 1.0
+      y = horizon_y + (f ** 2) * (h - horizon_y)
+      
+      # Fade out lines near the horizon
+      alpha = int(min(255, 255 * (f * 2.0)))
+      line_color = rl.Color(grid_color.r, grid_color.g, grid_color.b, alpha)
+      
+      rl.draw_line(0, int(y), w, int(y), line_color)
+        
+    # Vertical lines (diverging from center)
+    num_v_lines = 40
+    for i in range(-num_v_lines, num_v_lines):
+      x_bottom = center_x + i * 120
+      rl.draw_line(center_x, horizon_y, int(x_bottom), h, grid_color)
+
+    # Draw cyan horizon line with thickness
+    rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0, horizon_color)
+
+    # Draw the Rivian logo in the middle, sitting on the horizon
+    if self.texture is not None:
+      tex_w = self.texture.width
+      tex_h = self.texture.height
+      scale = 2.0 if not self._is_mici else 1.0
+      dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(horizon_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
+      source = rl.Rectangle(0.0, 0.0, float(tex_w), float(tex_h))
+      
+      # We tint it BLACK to make a perfect silhouette against the bright sun
+      rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.BLACK)
+
     return -1
