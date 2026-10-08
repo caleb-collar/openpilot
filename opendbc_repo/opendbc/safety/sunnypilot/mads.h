@@ -173,6 +173,8 @@ inline void mads_exit_controls(const DisengageReason reason) {
     m_mads_state.controls_requested_lateral = false;
     controls_allowed_lateral = false;
   }
+  
+  heartbeat_engaged_mads_mismatches = 0U;
 }
 
 inline void mads_state_update(const bool op_vehicle_moving, const bool op_acc_main, const bool op_allowed, const bool is_braking, const bool _steering_disengage) {

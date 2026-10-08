@@ -22,6 +22,8 @@ def checksum(msg):
     ret[0] = _checksum(ret[1:], 0x1D, 0xB1)
   elif addr == 0x150:
     ret[0] = _checksum(ret[1:], 0x1D, 0x9A)
+  elif addr == 0x162:
+    ret[0] = _checksum(ret[1:], 0x1D, 0xD1)
 
   return addr, ret, bus
 
@@ -53,6 +55,7 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
   cnt_speed = 0
   cnt_speed_2 = 0
   cnt_angle_cmd = 0
+  cnt_adas = 0
 
   def _get_steer_cmd_angle_max(self, speed):
     return get_max_angle_vm(max(speed, 1), self.VM, CarControllerParams)
@@ -95,6 +98,12 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
               "VDM_PropStatus_Counter": self.cnt_speed_2 % 15, "VDM_VehicleSpeedQ": 1 if quality_flag else 0}
     self.__class__.cnt_speed_2 += 1
     return self.packer.make_can_msg_safety("VDM_PropStatus", 0, values, fix_checksum=checksum)
+
+  
+  def _lkas_button_msg(self, enabled):
+    values = {"VDM_UserAdasRequest": 1 if enabled else 0, "VDM_AdasStatus_Counter": self.cnt_adas % 15}
+    self.__class__.cnt_adas += 1
+    return self.packer.make_can_msg_safety("VDM_AdasSts", 0, values, fix_checksum=checksum)
 
   def _pcm_status_msg(self, enable):
     values = {"ACM_FeatureStatus": enable, "ACM_Unkown1": 1}
@@ -176,6 +185,22 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
         "SCCM_WheelTouch_Calibration": 100,
       }
       self.assertTrue(self._tx(self.packer.make_can_msg_safety("SCCM_WheelTouch", 2, values)))
+
+  
+  cnt_stalk = 0
+
+  def _stalk_msg(self, req):
+    values = {"VDM_UserAdasRequest": req, "VDM_AdasStatus_Counter": self.cnt_stalk % 15}
+    self.__class__.cnt_stalk += 1
+    return self.packer.make_can_msg_safety("VDM_AdasSts", 0, values, fix_checksum=checksum)
+
+  def test_mads_button_gated_on_cruise(self):
+    for cruise in (False, True):
+      self._rx(self._pcm_status_msg(1 if cruise else 0))
+      self._rx(self._stalk_msg(1))
+      expected = 0 if cruise else 1
+      self.assertEqual(self.safety.get_mads_button_press(), expected, f"cruise={cruise}")
+      self._rx(self._stalk_msg(0))
 
   def test_rx_hook(self):
     # checksum, counter, and quality flag checks
