@@ -18,7 +18,8 @@ echo "branch root (upstream prebuilt): $(git log -1 --format='%h %s' "$ROOT")"
 echo "checking $REV ($(git rev-parse --short "$REV"))"
 
 # I6 + D2: upstream-owned files that change every release stay byte-identical.
-for f in CHANGELOG.md RELEASES.md; do
+# uv.lock: nothing on the device reads it, but a local `uv run` silently re-locks it, so pin it here.
+for f in CHANGELOG.md RELEASES.md uv.lock; do
   if grep -qxF "$f" <<<"$CHANGED"; then err "$f is upstream-owned and must not be edited (plan I6/D2)"; else ok "$f untouched"; fi
 done
 
