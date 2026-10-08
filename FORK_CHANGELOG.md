@@ -10,6 +10,12 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 > The root `CHANGELOG.md` is upstream sunnypilot's changelog. The device parses it at runtime
 > for release notes, so this fork leaves it unchanged.
 
+## [Unreleased]
+
+### Added
+
+- Added "GaryPilot" retro 1980s chromed gradient pixel art badge to the bottom center of the Outrun screensaver (`ScreenSaverSP`), supporting both Comma 4 and Comma 3X resolutions.
+
 ## [0.1.0] - 2026-10-07
 
 ### Added

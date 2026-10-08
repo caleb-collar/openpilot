@@ -31,7 +31,14 @@ class ScreenSaverSP(Widget):
       with open(self.logo_path, "wb") as f:
         f.write(base64.b64decode(b64_logo))
 
+    self.gp_logo_path = "/tmp/garypilot_screensaver_logo.png"
+    b64_gp = "iVBORw0KGgoAAAANSUhEUgAAAJkAAAAoCAYAAADtylhqAAAFkUlEQVR4nO2bQWicRRSAJ7trXPltlpCIYYsVD0p6EKFJvEqhoHg1J9tLD5JAEBa8JNDCSsTtRSiI4OKhl66n9FSoEYSSq8ZePLjUQ3HFEChBWlnItibxsDv7zz/73pv35v83set8l+Sfee/Ne2/ePzP/7r9KBQKBQCAQCAQCgZFn7KQdCMQcqeqqVGdMVa8Nw5csKZy0A4EuusCiXL1m97UPl9aw9uPwLS2sIvO5wyiehbuPSxa50fnQhfTca5/0+54++AJtHyZUXNL5cxYZdYf58KzcfRyyyE37cGnNnNDi/KeJ/qcP6PZhktXqSRaZncTovetS+wnam5VU+v8lsshNe7Oioly9Zk5cfroEymLtw8aMy3f+nCuZTuLEpRteA4wyaXMzcemGenzzcqLQ2psV0N5JFVkW47LOZJOVW6kHssniSWrYZ0WO/bS5mazcUn9d/6BfaFGuXnt88/KAXH56wmnLNx9jqnoN04XGxWSxsxqryApWNT+8coGj5kRyltFnFx3IcZ0VMfta3ic3L332w8C1S88ex8Y3H+aZENK1x3XlA4JVZOaSubu84DQqYebrn5wyu8sL/TvdvIt0wBwb2g4kr9u5Ppry0txEuXrt4ZULoM9QPNomtW3ZRSLJh7mCunSxPlf+xEWmVLoCs5dUzp5/euO++nPxjcTZRSfl9MZ9sQ/ScwYlj+UG2jqOVHVVT+ju8gLoOxYP5oNdYJJ8mHmV6kpgFdmpqRcH2ny2KXvLw2xDzN7dUc3z5UShzd7dkbogGpMjD/VhZxN99tGFBuliY1E+6LnwyYfOq2uMNLCKbM64iZpG+8V7/KAa58rgljcnWFTm7u307Uh1G+fKsR1Lr6loKHksNxSQ/1oXG8vls2QubLSt5vmylx1X3Kwi+/yt+P8G0u60cbCjXs3HE60TbU4+xO8HyaAbSLtpG0OvILbfDVi8DyUP5YbzlIfFhY3l8tnud+XDHN+cG3s+TDlOjiFYRTYtbHehC6x9QN81Ub4sGpt7VpT6TcnbfdxjhDSnLp8l+Yhy9RpHHpLL/BN/zdkoMq5KSDuHUn8SzhQfMfRLgEwJGbvbTn2vplcYTBeDkrdzc6b4iLQF6bX2qZzS8br0sM/+XPKwnDvHEKwieznK9f9v7Svjf3pyFqb+Tlxr3W57blDBorWfHNu0gbVzkOpS8nZubFkOrf14K/eNN8uYMDlJjk1YRTZjOrTX/eNaNqNcvTZjJ3xv0N7tFr2acWyY7RwwXfvJ1yU/0LcHyDqw4/eNlxOTeVbk5g+aeynMIssnru0vdbl6VDtkr1uofBtcIF3oyZczlt13uxWpj87St/w3vxYT12bsknjNeeDG1P/QlZm/NHnWiFeyq/NP1Pr2OOuAi93VEnscG1JsXV8fsD67iCCwm5Qbr+2zJKar80+UeVxZ3x5H/UyTZ418u1RKffXOP0zzvITR9mLZla3Y3TTBr2+PD4yJ+bCyVRAVmeTpy9ya9WqDjUX5vLJVEMUEzYu06CWwimxlq6A23j9KPVgW9uIDst8y7qNPyUJ9ad78hexxffbJyeKd+GcekN++eTZxFpkOcPHOmPr+4vMph+t423u30Ulcn5q0t6SOcmG+0qKT6/ahQ46V7HP74IIaC/e54+iH0TmlVt8s4iOLzP6uzZ5oX3ztmclI44v5JTvHzgtT9hNwrJNVTlz2XD5LY7L1sNU3i/hYP4nL+uXAYcLdqjgx6UPzj9VXEu1vV/8g736f7dLlD/ViYVqwN0Yk8rT9/zlHqrpKPSn/8uXsQNubHzdV+3BpbZR+dTVMwu8ue/z27RxL7vUPfx6yJ6NHKLIeg+cunFH6Wd9xEIqsR9FRZNPz3yWuw1bJJxRZD7uIIMIK5kcoMuX/KX0gEAgEAoFAIBAIBHr8C5kfwD+uIlpuAAAAAElFTkSuQmCC"  # noqa: E501
+    if not os.path.exists(self.gp_logo_path):
+      with open(self.gp_logo_path, "wb") as f:
+        f.write(base64.b64decode(b64_gp))
+
     self.texture = None
+    self.gp_texture = None
     self._start_time = None
     self._dismiss = False
     self._screensaver_timeout = 300
@@ -55,6 +62,8 @@ class ScreenSaverSP(Widget):
     self._dismiss = False
     if self.texture is None:
       self.texture = rl.load_texture(self.logo_path)
+    if self.gp_texture is None:
+      self.gp_texture = rl.load_texture(self.gp_logo_path)
 
   def hide_event(self):
     super().hide_event()
@@ -258,5 +267,17 @@ class ScreenSaverSP(Widget):
 
     # Draw cyan horizon line with thickness
     rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0 if not self._is_mici else 2.0, horizon_color)
+
+    # Draw GaryPilot pixel art badge at bottom center
+    if self.gp_texture is not None:
+      gp_w = self.gp_texture.width
+      gp_h = self.gp_texture.height
+      gp_scale = 1.0 if self._is_mici else 4.0
+      gp_x = center_x - int((gp_w * gp_scale) / 2)
+      gp_padding = 6 if self._is_mici else 24
+      gp_y = h - int(gp_h * gp_scale) - gp_padding
+      dest = rl.Rectangle(float(gp_x), float(gp_y), float(gp_w * gp_scale), float(gp_h * gp_scale))
+      source = rl.Rectangle(0.0, 0.0, float(gp_w), float(gp_h))
+      rl.draw_texture_pro(self.gp_texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.WHITE)
 
     return -1
