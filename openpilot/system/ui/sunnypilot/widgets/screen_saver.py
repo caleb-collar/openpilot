@@ -138,15 +138,34 @@ class ScreenSaverSP(Widget):
       # Tint it sunset orange/yellow
       rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.Color(255, 204, 0, 255))
       
-      # Draw black horizontal slices through the bottom half of the logo
+      # Draw background-color horizontal slices through the bottom half of the logo
       sun_radius = (tex_h * scale) / 2
-      num_slices = 100 if not self._is_mici else 50
-      for i in range(num_slices):
-        slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
-        # Draw slices only on the bottom half of the sun and above the horizon
-        if slice_y > sun_y and slice_y <= horizon_y:
-          if (i // 2) % 2 != 0:  
-            rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), 4 if not self._is_mici else 2, bg_color)
+      current_y = 0.0
+      solid_thickness = 25.0 if not self._is_mici else 12.0
+      cut_thickness = 2.0 if not self._is_mici else 1.0
+      
+      while current_y < sun_radius:
+        current_y += solid_thickness
+        slice_y = sun_y + int(current_y)
+        
+        if slice_y > horizon_y:
+          break
+          
+        cut_h = int(cut_thickness)
+        if cut_h < 1: 
+          cut_h = 1
+          
+        if slice_y + cut_h > horizon_y:
+          cut_h = int(horizon_y - slice_y)
+          
+        if cut_h > 0 and slice_y > sun_y:
+          rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), cut_h, bg_color)
+          
+        current_y += cut_thickness
+        
+        # Modify thicknesses for the next iteration: solid bands get thinner, cutouts get thicker
+        solid_thickness *= 0.85
+        cut_thickness *= 1.4
             
       # Strictly occlude the sun and glow if they fall below the horizon line
       rl.draw_rectangle(0, int(horizon_y), w, h - int(horizon_y), bg_color)
@@ -223,6 +242,14 @@ class ScreenSaverSP(Widget):
       fog_color = rl.Color(bg_color.r, bg_color.g, bg_color.b, alpha)
       rl.draw_line(0, horizon_y + i, w, horizon_y + i, fog_color)
         
+    # Add a soft glow to the horizon line
+    glow_size = 20 if not self._is_mici else 10
+    for i in range(1, glow_size):
+      alpha = int(100 * (1.0 - (i / glow_size)))
+      glow_col = rl.Color(horizon_color.r, horizon_color.g, horizon_color.b, alpha)
+      rl.draw_line(0, horizon_y - i, w, horizon_y - i, glow_col)
+      rl.draw_line(0, horizon_y + i, w, horizon_y + i, glow_col)
+
     # Draw cyan horizon line with thickness
     rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0 if not self._is_mici else 2.0, horizon_color)
 
