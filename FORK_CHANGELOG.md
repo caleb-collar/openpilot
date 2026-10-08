@@ -15,6 +15,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 ### Added
 
 - Added "GaryPilot" retro 1980s chromed gradient pixel art badge to the bottom center of the Outrun screensaver (`ScreenSaverSP`), supporting both Comma 4 and Comma 3X resolutions.
+- Updated UI home screen, settings toggles, startup alerts, device info, and setup wizards to reflect "GaryPilot" branding across Comma 4 and Comma 3X layouts.
 
 ## [0.1.0] - 2026-10-07
 

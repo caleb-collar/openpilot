@@ -23,11 +23,11 @@ class ExperimentalModeConfirmPage(NavScroller):
     self._scroller.add_widgets([
       GreyBigButton("enabling\nexperimental mode", "scroll to continue",
                     gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
-      GreyBigButton("", "openpilot defaults to driving in chill mode."),
+      GreyBigButton("", "GaryPilot defaults to driving in chill mode."),
       GreyBigButton("", "Experimental mode enables alpha-level features that aren't ready for chill mode."),
       GreyBigButton("End-to-End Longitudinal Control"),
       GreyBigButton("", "Let the driving model control the gas and brakes."),
-      GreyBigButton("", "openpilot will drive as it thinks a human would, including stopping for red lights and stop signs."),
+      GreyBigButton("", "GaryPilot will drive as it thinks a human would, including stopping for red lights and stop signs."),
       GreyBigButton("", "The set speed will only act as an upper bound."),
       GreyBigButton("", "This is an alpha quality feature; mistakes should be expected."),
       GreyBigButton("New Driving Visualization"),
@@ -49,7 +49,7 @@ class TogglesLayoutMici(NavScroller):
     always_on_dm_toggle = BigParamControl("always-on driver monitor", "AlwaysOnDM")
     record_front = BigParamControl("record & upload cabin camera", "RecordFront", toggle_callback=restart_needed_callback)
     record_mic = BigParamControl("record & upload mic audio", "RecordAudio", toggle_callback=restart_needed_callback)
-    enable_openpilot = BigParamControl("enable sunnypilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
+    enable_openpilot = BigParamControl("enable GaryPilot", "OpenpilotEnabledToggle", toggle_callback=restart_needed_callback)
 
     self._scroller.add_widgets([
       self._personality_toggle,

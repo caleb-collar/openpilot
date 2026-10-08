@@ -130,7 +130,7 @@ class SoftwareSelectionPage(NavWidget):
                use_custom_software_callback: Callable):
     super().__init__()
 
-    self._openpilot_slider = self._child(LargerSlider("slide to install\nopenpilot", use_openpilot_callback))
+    self._openpilot_slider = self._child(LargerSlider("slide to install\nGaryPilot", use_openpilot_callback))
     self._openpilot_slider.set_enabled(lambda: self.enabled and not self.is_dismissing)
     self._custom_software_slider = self._child(LargerSlider("slide to install\ncustom software", use_custom_software_callback, green=False, shimmer_offset=0.4))
     self._custom_software_slider.set_enabled(lambda: self.enabled and not self.is_dismissing)
@@ -322,7 +322,7 @@ class NetworkSetupPageBase(Scroller):
 
     self._waiting_button = BigPillButton("connect to\ncontinue", disabled_background=True)
     self._waiting_button.set_click_callback(on_waiting_click)
-    self._continue_button = BigPillButton("install openpilot", green=True)
+    self._continue_button = BigPillButton("install GaryPilot", green=True)
     self._continue_button.set_click_callback(lambda: continue_callback(self._custom_software))
 
     self._scroller.add_widgets([
@@ -404,7 +404,7 @@ class NetworkSetupPageBase(Scroller):
 
   def set_custom_software(self, custom_software: bool):
     self._custom_software = custom_software
-    self._continue_button.set_text("install openpilot" if not custom_software else "choose software")
+    self._continue_button.set_text("install GaryPilot" if not custom_software else "choose software")
     self._continue_button.set_green(not custom_software)
 
   def _update_state(self):
@@ -562,7 +562,7 @@ class Setup(Widget):
 
     except urllib.error.HTTPError as e:
       if e.code == 409:
-        self._download_failed_reason = "Incompatible sunnypilot version."
+        self._download_failed_reason = "Incompatible GaryPilot version."
     except Exception:
       self._download_failed_reason = "Invalid URL: " + self.download_url.replace("https://", "", 1)
 

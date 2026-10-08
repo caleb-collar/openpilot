@@ -18,20 +18,20 @@ PERSONALITY_TO_INT = log.LongitudinalPersonality.schema.enumerants
 # Description constants
 DESCRIPTIONS = {
   "OpenpilotEnabledToggle": tr_noop(
-    "Use the sunnypilot system for adaptive cruise control and lane keep driver assistance. " +
+    "Use the GaryPilot system for adaptive cruise control and lane keep driver assistance. " +
     "Your attention is required at all times to use this feature."
   ),
-  "DisengageOnAccelerator": tr_noop("When enabled, pressing the accelerator pedal will disengage sunnypilot."),
+  "DisengageOnAccelerator": tr_noop("When enabled, pressing the accelerator pedal will disengage GaryPilot."),
   "LongitudinalPersonality": tr_noop(
-    "Standard is recommended. In aggressive mode, sunnypilot will follow lead cars closer and be more aggressive with the gas and brake. " +
-    "In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with " +
+    "Standard is recommended. In aggressive mode, GaryPilot will follow lead cars closer and be more aggressive with the gas and brake. " +
+    "In relaxed mode GaryPilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with " +
     "your steering wheel distance button."
   ),
   "IsLdwEnabled": tr_noop(
     "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line " +
     "without a turn signal activated while driving over 31 mph (50 km/h)."
   ),
-  "AlwaysOnDM": tr_noop("Enable driver monitoring even when sunnypilot is not engaged."),
+  "AlwaysOnDM": tr_noop("Enable driver monitoring even when GaryPilot is not engaged."),
   'RecordFront': tr_noop("Upload data from the driver facing camera and help improve the driver monitoring algorithm."),
   "IsMetric": tr_noop("Display speed in km/h instead of mph."),
   "RecordAudio": tr_noop("Record and store microphone audio while driving. The audio will be included in the dashcam video in comma connect."),
@@ -47,7 +47,7 @@ class TogglesLayout(Widget):
     # param, title, desc, icon, needs_restart
     self._toggle_defs = {
       "OpenpilotEnabledToggle": (
-        lambda: tr("Enable sunnypilot"),
+        lambda: tr("Enable GaryPilot"),
         DESCRIPTIONS["OpenpilotEnabledToggle"],
         "chffr_wheel.png",
         True,
