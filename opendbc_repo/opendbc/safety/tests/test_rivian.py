@@ -318,26 +318,66 @@ class TestRivianIgnition(unittest.TestCase):
     self.safety.init_tests()
     self.packer = CANPackerSafety("rivian_primary_actuator")
 
-  def _msg(self, counter, mode):
+  def _msg_epas(self, counter, mode):
     return self.packer.make_can_msg_safety("VDM_OutputSignals", 0,
                                            {"VDM_OutputSigs_Counter": counter,
                                             "VDM_EpasPowerMode": mode})
 
-  # VDM_EpasPowerMode_Drive_On=1
-  def test_ignition_on(self):
+  def _msg_prop(self, counter, prndl):
+    return self.packer.make_can_msg_safety("VDM_PropStatus", 0,
+                                           {"VDM_PropStatus_Counter": counter,
+                                            "VDM_Prndl_Status": prndl})
+
+  def test_ignition_on_in_drive(self):
     for i in range(15):
       self.safety.init_tests()
-      self.safety.ignition_can_hook(self._msg(i, 1))
+      # send EPAS on (1)
+      self.safety.ignition_can_hook(self._msg_epas(i, 1))
+      self.safety.ignition_can_hook(self._msg_epas((i + 1) % 15, 1))
+      # default prndl is Park (1) -> ignition remains off
       self.assertFalse(self.safety.get_ignition_can())
-      self.safety.ignition_can_hook(self._msg((i + 1) % 15, 1))
+
+      # shift to Drive (4)
+      self.safety.ignition_can_hook(self._msg_prop(i, 4))
+      self.assertFalse(self.safety.get_ignition_can())
+      self.safety.ignition_can_hook(self._msg_prop((i + 1) % 15, 4))
       self.assertTrue(self.safety.get_ignition_can())
 
-  def test_ignition_off(self):
-    self.safety.ignition_can_hook(self._msg(0, 1))
-    self.safety.ignition_can_hook(self._msg(1, 1))
+  def test_ignition_off_when_parked(self):
+    # start in drive with epas on
+    self.safety.ignition_can_hook(self._msg_epas(0, 1))
+    self.safety.ignition_can_hook(self._msg_epas(1, 1))
+    self.safety.ignition_can_hook(self._msg_prop(0, 4))
+    self.safety.ignition_can_hook(self._msg_prop(1, 4))
     self.assertTrue(self.safety.get_ignition_can())
-    self.safety.ignition_can_hook(self._msg(2, 0))
-    self.safety.ignition_can_hook(self._msg(3, 0))
+
+    # shift to Park (1) -> immediate offroad
+    self.safety.ignition_can_hook(self._msg_prop(2, 1))
+    self.safety.ignition_can_hook(self._msg_prop(3, 1))
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # shift back to Drive (4) -> immediate onroad
+    self.safety.ignition_can_hook(self._msg_prop(4, 4))
+    self.safety.ignition_can_hook(self._msg_prop(5, 4))
+    self.assertTrue(self.safety.get_ignition_can())
+
+  def test_ignition_reverse_and_neutral(self):
+    self.safety.ignition_can_hook(self._msg_epas(0, 1))
+    self.safety.ignition_can_hook(self._msg_epas(1, 1))
+
+    # Reverse (2)
+    self.safety.ignition_can_hook(self._msg_prop(0, 2))
+    self.safety.ignition_can_hook(self._msg_prop(1, 2))
+    self.assertTrue(self.safety.get_ignition_can())
+
+    # Neutral (3)
+    self.safety.ignition_can_hook(self._msg_prop(2, 3))
+    self.safety.ignition_can_hook(self._msg_prop(3, 3))
+    self.assertTrue(self.safety.get_ignition_can())
+
+    # EPAS off (0) disables ignition even in gear
+    self.safety.ignition_can_hook(self._msg_epas(2, 0))
+    self.safety.ignition_can_hook(self._msg_epas(3, 0))
     self.assertFalse(self.safety.get_ignition_can())
 
 

@@ -7,6 +7,10 @@
 
 bool ignition_can = false;
 uint32_t ignition_can_cnt = 0U;
+bool rivian_epas_on = false;
+int rivian_prndl = 1;  // 1 = Park
+int prev_counter_rivian_150 = -1;
+int prev_counter_rivian_152 = -1;
 
 void ignition_can_hook(const CANPacket_t *msg) {
   if (msg->bus == 0U) {
@@ -24,13 +28,27 @@ void ignition_can_hook(const CANPacket_t *msg) {
       // 0x152 overlaps with Subaru pre-global which has this bit as the high beam
       int counter = msg->data[1] & 0xFU;  // max is only 14
 
-      static int prev_counter_rivian = -1;
-      if ((counter == ((prev_counter_rivian + 1) % 15)) && (prev_counter_rivian != -1)) {
+      if ((counter == ((prev_counter_rivian_152 + 1) % 15)) && (prev_counter_rivian_152 != -1)) {
         // VDM_OutputSignals->VDM_EpasPowerMode
-        ignition_can = ((msg->data[7] >> 4U) & 0x3U) == 1U;  // VDM_EpasPowerMode_Drive_On=1
+        rivian_epas_on = ((msg->data[7] >> 4U) & 0x3U) == 1U;  // VDM_EpasPowerMode_Drive_On=1
+        bool in_gear = (rivian_prndl == 2) || (rivian_prndl == 3) || (rivian_prndl == 4);
+        ignition_can = rivian_epas_on && in_gear;
         ignition_can_cnt = 0U;
       }
-      prev_counter_rivian = counter;
+      prev_counter_rivian_152 = counter;
+    }
+
+    if ((msg->addr == 0x150U) && (len == 7)) {
+      int counter = msg->data[1] & 0xFU;  // max is only 14
+
+      if ((counter == ((prev_counter_rivian_150 + 1) % 15)) && (prev_counter_rivian_150 != -1)) {
+        // VDM_PropStatus->VDM_Prndl_Status: 1=Park, 2=Reverse, 3=Neutral, 4=Drive
+        rivian_prndl = msg->data[2] & 0xFU;
+        bool in_gear = (rivian_prndl == 2) || (rivian_prndl == 3) || (rivian_prndl == 4);
+        ignition_can = rivian_epas_on && in_gear;
+        ignition_can_cnt = 0U;
+      }
+      prev_counter_rivian_150 = counter;
     }
 
     // Tesla Model 3/Y exception

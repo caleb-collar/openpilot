@@ -335,6 +335,10 @@ void init_tests(void){
 
   ignition_can = false;
   ignition_can_cnt = 0U;
+  rivian_epas_on = false;
+  rivian_prndl = 1;
+  prev_counter_rivian_150 = -1;
+  prev_counter_rivian_152 = -1;
 
   // reset MADS state to prevent leaking between tests
   mads_set_system_state(false, false, false);
