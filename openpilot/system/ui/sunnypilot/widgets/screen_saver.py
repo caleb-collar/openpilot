@@ -147,40 +147,52 @@ class ScreenSaverSP(Widget):
             rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), 4 if not self._is_mici else 2, bg_color)
     
     # Draw Mountains
-    rl.set_random_seed(42)
-    curr_x = -100
-    peaks = []
-    while curr_x < w + 200:
-        curr_x += rl.get_random_value(100, 300)
-        dist_from_center = abs(curr_x - center_x)
-        max_height = 100 + int((dist_from_center / (w/2)) * 150)
-        peaks.append((curr_x, horizon_y - rl.get_random_value(30, max_height)))
-        
-    px = -100
-    py = horizon_y
-    for cx, cy in peaks:
-        rl.draw_triangle(
-            rl.Vector2(float(px), float(horizon_y)),
-            rl.Vector2(float(px), float(py)),
-            rl.Vector2(float(cx), float(horizon_y)),
-            bg_color
-        )
-        rl.draw_triangle(
-            rl.Vector2(float(px), float(py)),
-            rl.Vector2(float(cx), float(cy)),
-            rl.Vector2(float(cx), float(horizon_y)),
-            bg_color
-        )
-        
-        # Mountain internal wireframe lines
-        if rl.get_random_value(0, 1) == 0:
-            rl.draw_line_ex(rl.Vector2(float(cx), float(cy)), rl.Vector2(float(cx), float(horizon_y)), 2.0, rl.Color(grid_color.r, grid_color.g, grid_color.b, 100))
-        
-        # Mountain Outline
-        rl.draw_line_ex(rl.Vector2(float(px), float(py)), rl.Vector2(float(cx), float(cy)), 3.0, grid_color)
-        px = cx
-        py = cy
-    
+    def draw_mountain_layer(seed, color, min_dx, max_dx, min_h, max_h, y_offset, line_thick):
+        rl.set_random_seed(seed)
+        curr_x = -100
+        pts = []
+        is_peak = True
+        while curr_x < w + 200:
+            if is_peak:
+                dx = rl.get_random_value(min_dx, max_dx)
+                curr_x += dx
+                dist_from_center = abs(curr_x - center_x)
+                # Scale height so they are taller at edges, shorter in middle
+                height_scale = 0.4 + 0.6 * (dist_from_center / (w/2))
+                height = rl.get_random_value(min_h, max_h) * height_scale
+                pts.append((curr_x, horizon_y + y_offset - int(height)))
+            else:
+                dx = rl.get_random_value(int(min_dx*0.8), int(max_dx*0.8))
+                curr_x += dx
+                pts.append((curr_x, horizon_y + y_offset - rl.get_random_value(0, 20)))
+            is_peak = not is_peak
+            
+        px = -100
+        py = horizon_y + y_offset
+        for cx, cy in pts:
+            # Black fill
+            rl.draw_triangle(
+                rl.Vector2(float(px), float(horizon_y + y_offset)),
+                rl.Vector2(float(px), float(py)),
+                rl.Vector2(float(cx), float(horizon_y + y_offset)),
+                bg_color
+            )
+            rl.draw_triangle(
+                rl.Vector2(float(px), float(py)),
+                rl.Vector2(float(cx), float(cy)),
+                rl.Vector2(float(cx), float(horizon_y + y_offset)),
+                bg_color
+            )
+            # Outline
+            rl.draw_line_ex(rl.Vector2(float(px), float(py)), rl.Vector2(float(cx), float(cy)), float(line_thick), color)
+            px = cx
+            py = cy
+
+    # Back layer (taller, wider)
+    draw_mountain_layer(42, rl.Color(180, 0, 100, 255), 80 if not self._is_mici else 40, 150 if not self._is_mici else 80, 100, 300 if not self._is_mici else 150, 0, 2.0 if not self._is_mici else 1.0)
+    # Front layer (shorter, sharper, overlapping)
+    draw_mountain_layer(99, grid_color, 50 if not self._is_mici else 30, 100 if not self._is_mici else 50, 50, 150 if not self._is_mici else 80, 0, 3.0 if not self._is_mici else 1.5)
+
     # Draw grid (bottom half)
     num_h_lines = 30 if not self._is_mici else 20
     spacing = 50.0 if not self._is_mici else 30.0
