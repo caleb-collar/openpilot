@@ -107,3 +107,12 @@ This fork is released under the [MIT License](LICENSE), like sunnypilot and open
 > NO WARRANTY EXPRESSED OR IMPLIED.**
 
 For full license terms, see the [`LICENSE`](LICENSE) and [`LICENSE.md`](LICENSE.md) files.
+
+## Trademark & Legal Disclaimers
+
+* **Rivian®**, **R1T®**, and **R1S®** are registered trademarks of their respective owners, **RIVIAN AUTOMOTIVE, LLC** and **RIVIAN AUTOMOTIVE, INC.**
+* Rivian is a registered trademark of its respective owner. This project is independent and has no official affiliation with the manufacturer.
+* **No Endorsement or Affiliation:** This project is an independent, community-driven open-source research fork. It is not affiliated with, endorsed by, sponsored by, or certified by Rivian Automotive, LLC, Rivian Automotive, Inc., or any of their affiliates.
+* **No License or Credit Taken:** We do not claim any ownership, rights, or license to Rivian's trademarks, trade dress, or logos, nor do we take credit for or license Rivian's logo or intellectual property. Any references to Rivian vehicle makes or models are used strictly for vehicle identification, technical compatibility, and nominative fair use.
+* **Exclusion of Visual Assets:** As stated in the [`LICENSE`](LICENSE) and [`LICENSE.md`](LICENSE.md) files, the MIT license applies solely to source code files. Visual assets and UI themes are excluded from this license.
+

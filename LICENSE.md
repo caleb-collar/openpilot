@@ -2,6 +2,8 @@
 
 Copyright (c) 2024, Haibin Wen, SUNNYPILOT LLC
 
+The MIT license applies solely to source code files. Visual assets and UI themes are excluded from this license.
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to view and modify the Software, subject to the following conditions:
 
 1. **Permission Required**: Permission Required for Commercial, For-Profit, or Closed Source Use: Use of the Software, in whole or in part, for any commercial purposes, for-profit projects, or in closed source projects requires explicit written permission from the original author(s).
