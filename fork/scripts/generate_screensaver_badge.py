@@ -163,8 +163,8 @@ def generate_badge_base64(version_str: str | None = None) -> str:
   return base64.b64encode(generate_badge_png_bytes(version_str)).decode("utf-8")
 
 
-def create_pixel_rivian() -> Image.Image:
-  """Create authentic 76x42 pixel art Rivian R1T rear view."""
+def create_pixel_vehicle() -> Image.Image:
+  """Create authentic 76x42 pixel art vehicle rear view."""
   W, H = 76, 42
   img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
   d = ImageDraw.Draw(img)
@@ -245,7 +245,7 @@ def create_pixel_rivian() -> Image.Image:
   d.rectangle([60, 12, 63, 14], fill=MIRROR)
   d.point([(12, 13), (63, 13)], fill=ROOF)
 
-  # 6. Iconic Rivian Coast-to-Coast Red Lightbar
+  # 6. Coast-to-Coast Red Lightbar
   d.line([(10, 18), (65, 18)], fill=RED_GLOW)
   d.line([(10, 22), (65, 22)], fill=RED_GLOW)
   d.line([(10, 19), (65, 19)], fill=RED_HOT)
@@ -262,20 +262,20 @@ def create_pixel_rivian() -> Image.Image:
   return img
 
 
-def generate_rivian_png_bytes() -> bytes:
-  """Generate PNG bytes of the pixel art Rivian sprite."""
-  img = create_pixel_rivian()
+def generate_vehicle_png_bytes() -> bytes:
+  """Generate PNG bytes of the pixel art vehicle sprite."""
+  img = create_pixel_vehicle()
   buf = io.BytesIO()
   img.save(buf, format="PNG", optimize=True)
   return buf.getvalue()
 
 
-def generate_rivian_base64() -> str:
-  """Generate base64 encoded PNG of the pixel art Rivian sprite."""
-  return base64.b64encode(generate_rivian_png_bytes()).decode("utf-8")
+def generate_vehicle_base64() -> str:
+  """Generate base64 encoded PNG of the pixel art vehicle sprite."""
+  return base64.b64encode(generate_vehicle_png_bytes()).decode("utf-8")
 
 
-def update_screen_saver(gp_b64: str, riv_b64: str) -> bool:
+def update_screen_saver(gp_b64: str, veh_b64: str) -> bool:
   with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
     lines = f.readlines()
 
@@ -287,8 +287,8 @@ def update_screen_saver(gp_b64: str, riv_b64: str) -> bool:
       if line != new_line:
         changed = True
       new_lines.append(new_line)
-    elif line.startswith("RIVIAN_SPRITE_B64 = "):
-      new_line = f'RIVIAN_SPRITE_B64 = "{riv_b64}"  # noqa: E501\n'
+    elif line.startswith("VEHICLE_SPRITE_B64 = "):
+      new_line = f'VEHICLE_SPRITE_B64 = "{veh_b64}"  # noqa: E501\n'
       if line != new_line:
         changed = True
       new_lines.append(new_line)
@@ -303,33 +303,33 @@ def update_screen_saver(gp_b64: str, riv_b64: str) -> bool:
 
 
 def main():
-  parser = argparse.ArgumentParser(description="Generate GaryPilot Chromed Badge and Pixel Art Rivian")
+  parser = argparse.ArgumentParser(description="Generate GaryPilot Chromed Badge and Pixel Art Vehicle")
   parser.add_argument("--version", type=str, default=None, help="Explicit version string or None for title only")
   parser.add_argument("--check", action="store_true", help="Check if current code matches generated assets without modifying")
   args = parser.parse_args()
 
   gp_b64 = generate_badge_base64(args.version)
-  riv_b64 = generate_rivian_base64()
+  veh_b64 = generate_vehicle_base64()
 
   if args.check:
     with open(SCREEN_SAVER_PY, encoding="utf-8") as f:
       content = f.read()
     gp_ok = f'GARYPILOT_LOGO_B64 = "{gp_b64}"' in content
-    riv_ok = f'RIVIAN_SPRITE_B64 = "{riv_b64}"' in content
-    if gp_ok and riv_ok:
+    veh_ok = f'VEHICLE_SPRITE_B64 = "{veh_b64}"' in content
+    if gp_ok and veh_ok:
       print("[✓] Screensaver assets in screen_saver.py are up to date.")
       sys.exit(0)
     else:
       print("[✗] Screensaver assets in screen_saver.py are OUT OF DATE.")
       if not gp_ok:
         print("  - GARYPILOT_LOGO_B64 mismatch")
-      if not riv_ok:
-        print("  - RIVIAN_SPRITE_B64 mismatch")
+      if not veh_ok:
+        print("  - VEHICLE_SPRITE_B64 mismatch")
       sys.exit(1)
 
-  changed = update_screen_saver(gp_b64, riv_b64)
+  changed = update_screen_saver(gp_b64, veh_b64)
   if changed:
-    print("[✓] Successfully generated and updated GaryPilot badge and Rivian sprite in screen_saver.py")
+    print("[✓] Successfully generated and updated GaryPilot badge and vehicle sprite in screen_saver.py")
   else:
     print("[✓] Screensaver assets in screen_saver.py are already up to date")
 

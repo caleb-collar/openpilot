@@ -12,7 +12,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
-- Replaced the screensaver version number with an authentic driving pixel art Rivian R1T cruising forward on the Outrun perspective grid: features signature coast-to-coast red LED lightbar with stadium pill capsules, warm sunset rear glass reflections, yellow recovery hooks, cyan glowing license plate, road suspension micro-rumble (15 Hz), gentle lane cruise sway (seamless 4.0s cycle), cyan underbody neon glow, and red taillight ambient bloom across Comma 4 (536x240) and Comma 3X (2160x1080 integer scaling).
+- Replaced the screensaver version number with an authentic driving pixel art vehicle cruising forward on the Outrun perspective grid: features signature coast-to-coast red LED lightbar with stadium pill capsules, warm sunset rear glass reflections, yellow recovery hooks, cyan glowing license plate, road suspension micro-rumble (15 Hz), gentle lane cruise sway (seamless 4.0s cycle), cyan underbody neon glow, and red taillight ambient bloom across Comma 4 (536x240) and Comma 3X (2160x1080 integer scaling).
 
 - Added subtle synthwave screensaver animations to the GaryPilot typography badge: weightless organic hover floating (seamless 4.0s sine cycle), breathing luminescence glow pulse (seamless 2.0s sine cycle), and authentic 4-pointed retro diamond star specular glints cycling across letter highlights ('G', 'P', '0') on Comma 4 and Comma 3X.
 - Added animated GIF export (`--gif`) and timestamped screenshot capture (`--time`) to `preview_screensaver.py` for headless verification and seamless loop inspection.

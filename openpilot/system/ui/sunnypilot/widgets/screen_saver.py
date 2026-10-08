@@ -32,9 +32,9 @@ GARYPILOT_LOGO_B64 = "iVBORw0KGgoAAAANSUhEUgAAAR0AAABWCAYAAADygkJgAABsj0lEQVR42u
 
 R_LOGO_PATH = "/tmp/r_logo_screensaver.png"
 GARYPILOT_LOGO_PATH = "/tmp/garypilot_screensaver_logo.png"
-RIVIAN_SPRITE_PATH = "/tmp/rivian_screensaver_sprite.png"
+VEHICLE_SPRITE_PATH = "/tmp/vehicle_screensaver_sprite.png"
 
-RIVIAN_SPRITE_B64 = "iVBORw0KGgoAAAANSUhEUgAAAEwAAAAqCAYAAAAZOr1sAAAC0klEQVR42u1Yv2/TQBj9HAxDlJgkjSyGyiDipR0qJhpBgqxUaoSQOqD0T4AVpLBkq1iyUAnW8ic0QggJoSJRReChZWSgi1OBFaEoMqEkVQYadAwkJja2E/84x7H9FvvOvu+7e37v7nwAIUKE8BAInMFTNIPWbt91dUDv3ryATlsk5o4whl1Bp90TU22+t88DCB+UlWweFugzU3FiVAJE4ROWsZG4yLLSboE+A7iRVVbS3rIkiTN4jEoAAEBHklwZTCqdxp4jgjuBW2S5hYhX7Dgv/SBnoa7ee27bifjxW/WyOh9uW5Kz+PrJAl9W1w0GA+OOkqQnLEngtIGWwnpPr+4mH4mb6vofT5hdQ5J12sQfHm8aTf5Oby9MB9s/OFKQUsguEVqEGU32WmqxojC9NkaEGfUfiyVLG0Wovdqz9HV6JeoQACD5sr+q90xXYQZt4rXuqpX+lDaKs1PYtOpyC3oqc11hZhN4DXb7T+L+uoE9rfj1GyHwMS6cIwjHCEOQUZF1seIPmn5WlWQ0COcIGx27sPn/j2DmFeNjYfMOExYATEPYxElfECUEjHKb0xAPfUFQRjUuQZQQy6QJWwoTRAn9Db5e8bO6GuLbKgCAZcKePa/JNrxT5ILgSHi9V5fvH9wraXITgRCmEBJml7BoLIGisQTCLflpylbbOAE9HgitF9P0IpQrWxDkOWy7ugVSuwn90xMitGQ4h4WEeRakWW+HhE0BnucDQUYul5vif1NnlRxhv65UVy573dFOtj43TL1/aTnjaH7+4KOiXOD+7Qi0VsmJCitwHEjtplymqJSvVLWyzMr340KxZUnLP7Q7SgFn7uvvh6PsEvSFI92rU3lcmcNMWWbxyljpq8GzoSWH1xEpelejGEZ5Ws0v4bbC86ukVdx8fHniO9fW11zJMzPCut2OfK9eQYZ28NRxduvbseZOwGo8W8G0CJsHBGGMnsEfK+cV9XK/7FkAAAAASUVORK5CYII="  # noqa: E501
+VEHICLE_SPRITE_B64 = "iVBORw0KGgoAAAANSUhEUgAAAEwAAAAqCAYAAAAZOr1sAAAC0klEQVR42u1Yv2/TQBj9HAxDlJgkjSyGyiDipR0qJhpBgqxUaoSQOqD0T4AVpLBkq1iyUAnW8ic0QggJoSJRReChZWSgi1OBFaEoMqEkVQYadAwkJja2E/84x7H9FvvOvu+7e37v7nwAIUKE8BAInMFTNIPWbt91dUDv3ryATlsk5o4whl1Bp90TU22+t88DCB+UlWweFugzU3FiVAJE4ROWsZG4yLLSboE+A7iRVVbS3rIkiTN4jEoAAEBHklwZTCqdxp4jgjuBW2S5hYhX7Dgv/SBnoa7ee27bifjxW/WyOh9uW5Kz+PrJAl9W1w0GA+OOkqQnLEngtIGWwnpPr+4mH4mb6vofT5hdQ5J12sQfHm8aTf5Oby9MB9s/OFKQUsguEVqEGU32WmqxojC9NkaEGfUfiyVLG0Wovdqz9HV6JeoQACD5sr+q90xXYQZt4rXuqpX+lDaKs1PYtOpyC3oqc11hZhN4DXb7T+L+uoE9rfj1GyHwMS6cIwjHCEOQUZF1seIPmn5WlWQ0COcIGx27sPn/j2DmFeNjYfMOExYATEPYxElfECUEjHKb0xAPfUFQRjUuQZQQy6QJWwoTRAn9Db5e8bO6GuLbKgCAZcKePa/JNrxT5ILgSHi9V5fvH9wraXITgRCmEBJml7BoLIGisQTCLflpylbbOAE9HgitF9P0IpQrWxDkOWy7ugVSuwn90xMitGQ4h4WEeRakWW+HhE0BnucDQUYul5vif1NnlRxhv65UVy573dFOtj43TL1/aTnjaH7+4KOiXOD+7Qi0VsmJCitwHEjtplymqJSvVLWyzMr340KxZUnLP7Q7SgFn7uvvh6PsEvSFI92rU3lcmcNMWWbxyljpq8GzoSWH1xEpelejGEZ5Ws0v4bbC86ukVdx8fHniO9fW11zJMzPCut2OfK9eQYZ28NRxduvbseZOwGo8W8G0CJsHBGGMnsEfK+cV9XK/7FkAAAAASUVORK5CYII="  # noqa: E501
 
 
 def ensure_screensaver_assets() -> tuple[str, str, str]:
@@ -57,21 +57,21 @@ def ensure_screensaver_assets() -> tuple[str, str, str]:
     with open(GARYPILOT_LOGO_PATH, "wb") as f:
       f.write(gp_data)
 
-  rivian_data = None
+  vehicle_data = None
   try:
-    from fork.scripts.generate_screensaver_badge import generate_rivian_png_bytes
-    rivian_data = generate_rivian_png_bytes()
+    from fork.scripts.generate_screensaver_badge import generate_vehicle_png_bytes
+    vehicle_data = generate_vehicle_png_bytes()
   except Exception:
     pass
 
-  if rivian_data is None:
-    rivian_data = base64.b64decode(RIVIAN_SPRITE_B64)
+  if vehicle_data is None:
+    vehicle_data = base64.b64decode(VEHICLE_SPRITE_B64)
 
-  if not os.path.exists(RIVIAN_SPRITE_PATH) or os.path.getsize(RIVIAN_SPRITE_PATH) != len(rivian_data):
-    with open(RIVIAN_SPRITE_PATH, "wb") as f:
-      f.write(rivian_data)
+  if not os.path.exists(VEHICLE_SPRITE_PATH) or os.path.getsize(VEHICLE_SPRITE_PATH) != len(vehicle_data):
+    with open(VEHICLE_SPRITE_PATH, "wb") as f:
+      f.write(vehicle_data)
 
-  return R_LOGO_PATH, GARYPILOT_LOGO_PATH, RIVIAN_SPRITE_PATH
+  return R_LOGO_PATH, GARYPILOT_LOGO_PATH, VEHICLE_SPRITE_PATH
 
 
 def draw_diamond_star(cx: float, cy: float, size: float, alpha: float) -> None:
@@ -109,7 +109,7 @@ def draw_screensaver(
   grid_offset: float = 0.0,
   texture: rl.Texture | None = None,
   gp_texture: rl.Texture | None = None,
-  rivian_texture: rl.Texture | None = None,
+  vehicle_texture: rl.Texture | None = None,
   anim_time: float = 0.0,
 ) -> None:
   # Outrun Colors
@@ -353,10 +353,10 @@ def draw_screensaver(
         sp_y = gp_y + gp_h * ry
         draw_diamond_star(sp_x, sp_y, size, alpha)
 
-  # Draw driving pixel art Rivian on the Outrun grid
-  if rivian_texture is not None:
-    r_w = float(int(rivian_texture.width * scale))
-    r_h = float(int(rivian_texture.height * scale))
+  # Draw driving pixel art vehicle on the Outrun grid
+  if vehicle_texture is not None:
+    r_w = float(int(vehicle_texture.width * scale))
+    r_h = float(int(vehicle_texture.height * scale))
 
     # Gentle lane cruise sway (seamless 4.0s loop)
     sway_amp = 6.0 if is_mici else 24.0
@@ -387,9 +387,9 @@ def draw_screensaver(
     )
 
     dest_r = rl.Rectangle(r_x, r_y, r_w, r_h)
-    source_r = rl.Rectangle(0.0, 0.0, float(rivian_texture.width), float(rivian_texture.height))
+    source_r = rl.Rectangle(0.0, 0.0, float(vehicle_texture.width), float(vehicle_texture.height))
     rl.draw_texture_pro(
-      rivian_texture,
+      vehicle_texture,
       source_r,
       dest_r,
       rl.Vector2(0.0, 0.0),
@@ -405,11 +405,11 @@ class ScreenSaverSP(Widget):
     self._params = params or (Params() if Params is not None else None)
     self._is_mici = HARDWARE.get_device_type() == 'mici' or (HARDWARE.get_device_type() == "pc" and os.getenv("BIG") != "1")
 
-    self.logo_path, self.gp_logo_path, self.rivian_path = ensure_screensaver_assets()
+    self.logo_path, self.gp_logo_path, self.vehicle_path = ensure_screensaver_assets()
 
     self.texture = None
     self.gp_texture = None
-    self.rivian_texture = None
+    self.vehicle_texture = None
     self._start_time = None
     self._dismiss = False
     self._screensaver_timeout = 300
@@ -435,8 +435,8 @@ class ScreenSaverSP(Widget):
       self.texture = rl.load_texture(self.logo_path)
     if self.gp_texture is None:
       self.gp_texture = rl.load_texture(self.gp_logo_path)
-    if self.rivian_texture is None:
-      self.rivian_texture = rl.load_texture(self.rivian_path)
+    if self.vehicle_texture is None:
+      self.vehicle_texture = rl.load_texture(self.vehicle_path)
 
   def hide_event(self):
     super().hide_event()
@@ -472,7 +472,7 @@ class ScreenSaverSP(Widget):
       self.grid_offset,
       self.texture,
       self.gp_texture,
-      self.rivian_texture,
+      self.vehicle_texture,
       time.monotonic(),
     )
     return -1
