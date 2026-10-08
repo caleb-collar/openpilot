@@ -76,9 +76,10 @@ class ScreenSaverSP(Widget):
 
     dt = rl.get_frame_time()
     self.grid_offset += self.grid_speed * dt
+    spacing = 50.0 if not self._is_mici else 30.0
     # Wrap offset around spacing for infinite loop effect
-    if self.grid_offset > 50.0:
-      self.grid_offset -= 50.0
+    if self.grid_offset > spacing:
+      self.grid_offset -= spacing
 
   def _render(self, rect: rl.Rectangle):
     self.set_rect(rect)
@@ -220,9 +221,8 @@ class ScreenSaverSP(Widget):
     # Draw grid (bottom half)
     num_h_lines = 30 if not self._is_mici else 20
     spacing = 50.0 if not self._is_mici else 30.0
-    for i in range(num_h_lines):
+    for i in range(num_h_lines + 1):
       f = (i + (self.grid_offset / spacing)) / num_h_lines
-      if f > 1.0: f = 1.0
       y = horizon_y + (f ** 2) * (h - horizon_y)
       
       alpha = int(min(255, 255 * (f * 2.0)))
