@@ -12,6 +12,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
 - Replaced the screensaver version number with an authentic driving pixel art vehicle cruising forward on the Outrun perspective grid: features signature coast-to-coast red LED lightbar with stadium pill capsules, warm sunset rear glass reflections, yellow recovery hooks, cyan glowing license plate, road suspension micro-rumble (15 Hz), gentle lane cruise sway (seamless 4.0s cycle), cyan underbody neon glow, and red taillight ambient bloom across Comma 4 (536x240) and Comma 3X (2160x1080 integer scaling).
 
 - Added subtle synthwave screensaver animations to the GaryPilot typography badge: weightless organic hover floating (seamless 4.0s sine cycle), breathing luminescence glow pulse (seamless 2.0s sine cycle), and authentic 4-pointed retro diamond star specular glints cycling across letter highlights ('G', 'P', '0') on Comma 4 and Comma 3X.
@@ -70,5 +72,6 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...GaryPilot
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.0...GaryPilot
+[0.2.0]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-v0.2.0
 [0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0
