@@ -201,6 +201,57 @@ class TestRivianSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest,
     self.assertEqual(self.safety.get_mads_button_press(), 0)
     self._rx(self._lkas_button_msg(0))
 
+  def test_b5b_up_1_with_acc_on_remain_active_or_pause(self):
+    """INTEGRATION_PLAN B5b, panda side. ACC on, steering mode REMAIN_ACTIVE or PAUSE, driver taps UP_1.
+
+    The car cancels stock ACC natively, and Python emits `lkas` -> manualSteeringRequired, so Python drops lateral.
+    The panda deliberately ignores the press while cruise is engaged. The two must still end up consistent:
+      * the panda never toggles MADS from this press,
+      * every frame Python sends while not steering (EacEnabled=0) is accepted, so there are no counter gaps on
+        0x110 (gaps fault the EPAS: AngleControlCntr, stg-a route c17ea97dc5472650/00000006 seg 3),
+      * once Python's heartbeat reports MADS disengaged, the panda revokes lateral within 3 heartbeats.
+    """
+    for disengage_on_brake, pause_on_brake in ((False, False), (False, True)):  # REMAIN_ACTIVE, PAUSE
+      with self.subTest(pause_on_brake=pause_on_brake):
+        self.safety.init_tests()
+        self.safety.set_mads_params(True, disengage_on_brake, pause_on_brake)
+        self._rx(self._speed_msg(10))
+        self._rx(self._speed_msg_2(10))
+        self._rx(self._lkas_button_msg(0))
+
+        # engaged with stock ACC: the panda grants longitudinal and MADS lateral, Python reports MADS engaged
+        self.safety.set_heartbeat_engaged_mads(True)
+        self._rx(self._pcm_status_msg(0))
+        self._rx(self._pcm_status_msg(1))
+        self.assertTrue(self.safety.get_controls_allowed())
+        self.assertTrue(self.safety.get_controls_allowed_lateral())
+
+        # UP_1 while ACC is engaged: no MADS press on the panda side, lateral unchanged
+        self._rx(self._lkas_button_msg(1))
+        self.assertEqual(self.safety.get_mads_button_press(), 0)
+        self.assertTrue(self.safety.get_controls_allowed_lateral())
+
+        # the car cancels ACC natively; Python has dropped lateral and only sends EacEnabled=0 from here on
+        self._rx(self._pcm_status_msg(0))
+        self._rx(self._lkas_button_msg(0))
+        self.assertFalse(self.safety.get_controls_allowed())
+        self.assertTrue(self._tx(self._angle_cmd_msg(0, False)))
+
+        # Python's heartbeat now says MADS is disengaged: the panda follows within 3 checks
+        self.safety.set_heartbeat_engaged_mads(False)
+        for _ in range(3):
+          self.assertTrue(self._tx(self._angle_cmd_msg(0, False)))
+          self.safety.mads_heartbeat_engaged_check()
+        self.assertFalse(self.safety.get_controls_allowed_lateral())
+
+        # consistent end state: not-steering frames still accepted, steering frames now refused
+        self.assertTrue(self._tx(self._angle_cmd_msg(0, False)))
+        self.assertFalse(self._tx(self._angle_cmd_msg(0, True)))
+
+        # and the release of UP_1 must not re-engage anything
+        self.assertEqual(self.safety.get_mads_button_press(), 0)
+        self.assertFalse(self.safety.get_controls_allowed_lateral())
+
   def test_rx_hook(self):
     # checksum, counter, and quality flag checks
     for quality_flag in (True, False):
