@@ -15,8 +15,9 @@ A personal [sunnypilot](https://github.com/sunnypilot/sunnypilot)-based openpilo
 |---|---|
 | Base | `xnor-tech/openpilot` `rx-dev` prebuilt `8a627abb0` |
 | Fork infrastructure (docs, commit conventions, CI) | ✅ |
-| Gear-stalk MADS parity (panda safety + Python) | 🚧 In progress. See [`INTEGRATION_PLAN.md`](INTEGRATION_PLAN.md) |
-| Releases | None yet. See [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md) |
+| Gear-stalk MADS parity (panda safety + Python) | ✅ |
+| Custom Outrun Screensaver (optimized for Comma 4) | ✅ |
+| Releases | Released! See [`FORK_CHANGELOG.md`](FORK_CHANGELOG.md) |
 
 ### Planned stalk behavior
 

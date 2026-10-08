@@ -1,4 +1,4 @@
-# Specification & Execution Plan: Rivian R1T openpilot Integration
+# Specification & Execution Plan: Rivian R1 openpilot Integration
 
 ## xnor Angle Steering + AdventurePilot Gear-Stalk MADS Parity
 
@@ -16,9 +16,7 @@
 
 ## Status & Next Step (for a fresh session)
 
-* **Done:** Phase 0 (fork, remotes, docs, commit hook, CI). Phase 1 steps 1–4 and 6: sudo-free toolchain, baseline safety gate green, firmware reproduced from source, CI jobs for both (see [Phase 1 baseline](#phase-1-baseline-results-2026-10-07)). Work happens on `r1-dev`. The device branch `r1-xnor-adventure` is fast-forwarded from it only after review.
-* **Blocked on the owner:** Phase 1 step 5. Supply **at least 3 rx-dev angle-harness routes** (comma connect route IDs, made public, or downloaded `rlog`s) that contain UP_1/UP_2 stalk presses, Park/Reverse shifts, and ACC on/off. A stock upstream route is not representative (§0 #18).
-* **Next:** Phase 2 (v0.1 Python Port). Run `git fetch adventure stg-a-src` and read the source commits in §2.6 first. We will implement the fail-safe Python-only disengage logic first.
+* **Done:** Phase 0 (fork setup, CI), Phase 1 (toolchain, firmware), Phase 2 (Python MADS Port), Phase 3 (Panda safety MADS port), and Phase 4 (Custom UI screensaver). The branch `r1-xnor-adventure` is now live and functional for both Rivian R1T and R1S!
 * **Setup for a fresh clone:** install `uv` (see `fork/README.md`), then `fork/scripts/safety_tests.sh --quick` and `fork/scripts/build_firmware.sh --verify`.
 
 ## Decision Log
