@@ -25,7 +25,8 @@ CI (`.github/workflows/fork-ci.yml`) calls the same scripts, so a green local ru
 | [`scripts/build_firmware.sh`](scripts/build_firmware.sh) | Builds `panda_h7`, `panda_jungle_h7`, and `body_h7` from a git ref in a throwaway sparse worktree, then compares the result with the committed binaries. `--verify` fails on mismatch. `--install` copies the build into `panda/board/obj` (Phase 4) | ~30 s |
 | [`scripts/fw_compare.py`](scripts/fw_compare.py) | The comparison used by `build_firmware.sh` (see below) | — |
 | [`scripts/fw_requirements.py`](scripts/fw_requirements.py) | Writes hash-pinned `scons` + `comma-deps-gcc-arm-none-eabi` requirements from the root `uv.lock` | — |
-| [`scripts/check_invariants.sh`](scripts/check_invariants.sh) | Prebuilt-branch hard rules from the plan: upstream `CHANGELOG.md`/`RELEASES.md` untouched, no param-key/capnp/native changes, `prebuilt` marker and `launch_openpilot.sh` mode, no LFS or ≥100 MB files, I1 angle-stack files unchanged | ~1 s |
+| [`scripts/check_invariants.sh`](scripts/check_invariants.sh) | Prebuilt-branch hard rules from the plan: upstream `CHANGELOG.md`/`RELEASES.md`/`uv.lock` untouched, no param-key/capnp/native changes, `prebuilt` marker and `launch_openpilot.sh` mode, no LFS or ≥100 MB files, I1 angle-stack files unchanged | ~1 s |
+| [`scripts/py_tests.sh`](scripts/py_tests.sh) | Runs the fork's openpilot-side Python tests plus upstream's MADS tests on x86_64. The prebuilt only ships aarch64 `libparams_c.so`/`ipc_pyx.so`, so it builds host copies from the committed sources into `~/.cache/r1-fork/host-native` (never into the tree) and uses a hash-pinned venv from `py_test_requirements.txt` | ~10 s first run |
 
 ## Firmware reproducibility
 

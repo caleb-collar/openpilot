@@ -24,6 +24,7 @@ fork/scripts/check_invariants.sh        # prebuilt-branch hard rules + I1 angle-
 fork/scripts/safety_tests.sh            # panda safety: tests, 100% coverage, MISRA, mutation (~1.5 min)
 fork/scripts/safety_tests.sh --quick    # tests + coverage only (~35 s)
 fork/scripts/build_firmware.sh --verify # committed panda firmware == build from committed sources
+fork/scripts/py_tests.sh                # fork + MADS Python tests on x86 (host-built params/msgq, ~10 s first run)
 ```
 
 Run the full safety gate before pushing any change under `opendbc_repo/opendbc/safety/`.

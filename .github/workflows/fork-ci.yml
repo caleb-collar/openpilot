@@ -73,6 +73,20 @@ jobs:
         if: steps.files.outputs.count == '0'
         run: echo "No Python files changed since the upstream base; skipping."
 
+  pytests:
+    name: Fork Python tests (host-built params + msgq)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: fork/scripts/py_test_requirements.txt
+      - run: fork/scripts/py_tests.sh
+
   invariants:
     name: Prebuilt-branch invariants (I1, I6, D4, installer)
     runs-on: ubuntu-24.04
