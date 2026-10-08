@@ -15,7 +15,6 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 ### Added
 
 - Added a custom Outrun/Synthwave retro screensaver (`ScreenSaverSP`) featuring a 3D perspective neon grid, starry night sky, wireframe mountains, and a glowing Rivian logo sunset.
-- Optimized screensaver UI rendering performance (reduced overdraw by replacing 200 alpha lines with a single gradient rectangle, improving mobile GPU fill-rate efficiency on the comma 4).
 
 - Fork infrastructure on top of `xnor-tech/openpilot` `rx-dev` prebuilt `8a627abb0`:
   fork README, this changelog, `CONTRIBUTING.md`, and the integration plan (`INTEGRATION_PLAN.md`, revision 2).
@@ -32,6 +31,16 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
     untouched, installer requirements, xnor angle-stack files unchanged).
 - CI jobs `invariants`, `safety`, and `firmware` (strict on `r1-dev`, `r1-xnor-adventure`, sync branches, and PRs;
   uploads firmware images and `SHA256SUMS` as artifacts).
+- `py_tests.sh` + CI job `pytests`: runs the fork's openpilot-side Python tests (and upstream's MADS tests) on x86_64 by
+  building host copies of `libparams_c.so` and msgq from the committed sources into a cache dir outside the tree.
+
+### Fixed
+
+- `MadsSteeringMode` seeding now matches AdventurePilot: DISENGAGE is seeded only on a never-driven device whose mode is
+  still the stock default. The previous code called `Params.put_int()`, which does not exist, so `card` would have
+  crashed at startup on any device still on the default mode.
+- `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
+- `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
 [Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-xnor-adventure
 [0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0
