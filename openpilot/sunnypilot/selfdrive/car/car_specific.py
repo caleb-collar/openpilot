@@ -15,6 +15,7 @@ from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 EventName = log.OnroadEvent.EventName
 EventNameSP = custom.OnroadEventSP.EventName
 GearShifter = structs.CarState.GearShifter
+ButtonType = structs.CarState.ButtonEvent.Type
 
 
 class CarSpecificEventsSP:
@@ -23,6 +24,15 @@ class CarSpecificEventsSP:
     self.CP_SP = CP_SP
 
     self.low_speed_alert = False
+    self._rivian_up2_active = False
+    self._rivian_prev_in_park = False
+    self._rivian_park_disable_pending = False
+    self._rivian_prev_in_reverse = False
+    self._rivian_reverse_disable_pending = False
+    if self.CP.brand == 'rivian':
+      from openpilot.common.params import Params
+      from openpilot.sunnypilot.mads.helpers import read_steering_mode_param
+      self._rivian_steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, Params())
 
   def update(self, CS: structs.CarState, events: Events):
     events_sp = EventsSP()
@@ -47,5 +57,41 @@ class CarSpecificEventsSP:
         if CS.cruiseState.standstill and not CS.brakePressed and self.CP_SP.enableGasInterceptor:
           if events.has(EventName.resumeRequired):
             events.remove(EventName.resumeRequired)
+
+    elif self.CP.brand == 'rivian':
+      in_park = CS.gearShifter == GearShifter.park
+      for be in CS.buttonEvents:
+        if be.type == ButtonType.altButton2:
+          self._rivian_up2_active = be.pressed
+          if be.pressed:
+            events_sp.add(EventNameSP.lkasDisable)
+            
+      if in_park and not self._rivian_prev_in_park:
+        events_sp.add(EventNameSP.lkasDisable)
+        self._rivian_park_disable_pending = True
+      elif in_park and self._rivian_park_disable_pending:
+        events_sp.add(EventNameSP.lkasDisable)
+        self._rivian_park_disable_pending = False
+      if not in_park:
+        self._rivian_park_disable_pending = False
+      self._rivian_prev_in_park = in_park
+      
+      in_reverse = CS.gearShifter == GearShifter.reverse
+      if in_reverse and not self._rivian_prev_in_reverse:
+        events_sp.add(EventNameSP.lkasDisable)
+        self._rivian_reverse_disable_pending = True
+      elif in_reverse and self._rivian_reverse_disable_pending:
+        events_sp.add(EventNameSP.lkasDisable)
+        self._rivian_reverse_disable_pending = False
+      if not in_reverse:
+        self._rivian_reverse_disable_pending = False
+      self._rivian_prev_in_reverse = in_reverse
+      
+      if self._rivian_up2_active or in_park:
+        events.remove(EventName.pcmEnable)
+
+      from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake
+      if CS.brakePressed and self._rivian_steering_mode_on_brake == MadsSteeringModeOnBrake.PAUSE:
+        events_sp.add(EventNameSP.silentLkasDisable)
 
     return events_sp

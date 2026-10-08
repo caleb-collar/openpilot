@@ -9,6 +9,8 @@ from collections import namedtuple
 from opendbc.car import structs
 from opendbc.car.interfaces import CarStateBase
 
+GearShifter = structs.CarState.GearShifter
+
 MadsDataSP = namedtuple("MadsDataSP",
                         ["lka_icon_states", "lat_active"])
 
@@ -21,12 +23,14 @@ class MadsCarController:
     self.lat_active = False
 
   def mads_status_update(self, CC: structs.CarControl, CC_SP: structs.CarControlSP, CS: CarStateBase) -> MadsDataSP:
+    lat_active = CC.latActive and CS.out.gearShifter == GearShifter.drive
+
     if CC_SP.mads.available:
-      self.lka_icon_states = self.lat_active
-      self.lat_active = CC.latActive
+      self.lka_icon_states = lat_active
+      self.lat_active = lat_active
     else:
       self.lka_icon_states = CC.enabled
-      self.lat_active = CC.latActive
+      self.lat_active = lat_active
 
     return MadsDataSP(self.lka_icon_states, self.lat_active)
 

@@ -22,8 +22,6 @@ class MadsSteeringModeOnBrake:
 
 
 def get_mads_limited_brands(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params: Params) -> bool:
-  if CP.brand == 'rivian':
-    return True
   if CP.brand == 'tesla':
     if not CP_SP.flags & TeslaFlagsSP.HAS_VEHICLE_BUS:
       return True
@@ -73,4 +71,7 @@ def set_car_specific_params(CP: structs.CarParams, CP_SP: structs.CarParamsSP, p
 
   # no ACC MAIN button for these brands
   if CP.brand in MADS_NO_ACC_MAIN_BUTTON:
-    params.remove("MadsMainCruiseAllowed")
+    if CP.brand == 'rivian':
+      params.put_bool("MadsMainCruiseAllowed", False, block=True)
+    else:
+      params.remove("MadsMainCruiseAllowed")
