@@ -121,7 +121,11 @@ class ScreenSaverSP(Widget):
       tex_h = self.texture.height
       scale = 8.5 if not self._is_mici else 4.5
       
-      dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(horizon_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
+      # Offset the sun up so it is not centered on the horizon
+      sun_offset_y = int((tex_h * scale) * 0.25)
+      sun_y = horizon_y - sun_offset_y
+      
+      dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(sun_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
       source = rl.Rectangle(0.0, 0.0, float(tex_w), float(tex_h))
       
       # Add a glow behind the sun using transparent circles
@@ -129,20 +133,23 @@ class ScreenSaverSP(Widget):
       for r_idx in range(25):
           r = glow_radius * (1.0 - (r_idx / 25.0))
           g_alpha = int(100 * (r_idx / 25.0))
-          rl.draw_circle(center_x, horizon_y, r, rl.Color(255, 100, 0, g_alpha))
+          rl.draw_circle(center_x, sun_y, r, rl.Color(255, 100, 0, g_alpha))
       
       # Tint it sunset orange/yellow
       rl.draw_texture_pro(self.texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.Color(255, 204, 0, 255))
       
       # Draw black horizontal slices through the bottom half of the logo
       sun_radius = (tex_h * scale) / 2
-      sun_y = horizon_y
       num_slices = 100 if not self._is_mici else 50
       for i in range(num_slices):
         slice_y = sun_y - sun_radius + int((i / num_slices) * (sun_radius * 2))
-        if slice_y > horizon_y:
+        # Draw slices only on the bottom half of the sun and above the horizon
+        if slice_y > sun_y and slice_y <= horizon_y:
           if (i // 2) % 2 != 0:  
             rl.draw_rectangle(int(center_x - (tex_w * scale) / 2), int(slice_y), int(tex_w * scale), 4 if not self._is_mici else 2, bg_color)
+            
+      # Strictly occlude the sun and glow if they fall below the horizon line
+      rl.draw_rectangle(0, int(horizon_y), w, h - int(horizon_y), bg_color)
     
     # Draw Mountains
     def draw_mountain_layer(seed, color, min_dx, max_dx, min_h, max_h, y_offset, line_thick):
