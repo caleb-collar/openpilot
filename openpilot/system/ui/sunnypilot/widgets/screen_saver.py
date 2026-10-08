@@ -128,9 +128,10 @@ class ScreenSaverSP(Widget):
       
       # Add a glow behind the sun using transparent circles
       glow_radius = int((tex_w * scale) * 0.6)
-      for r_idx in range(25):
-          r = glow_radius * (1.0 - (r_idx / 25.0))
-          g_alpha = int(100 * (r_idx / 25.0))
+      num_glow = 8 if not self._is_mici else 4
+      for r_idx in range(num_glow):
+          r = glow_radius * (1.0 - (r_idx / float(num_glow)))
+          g_alpha = int(100 * (r_idx / float(num_glow)))
           rl.draw_circle(center_x, horizon_y, r, rl.Color(255, 100, 0, g_alpha))
       
       # Tint it sunset orange/yellow
@@ -213,10 +214,8 @@ class ScreenSaverSP(Widget):
 
     # Draw a gradient rectangle over the horizon to fade out the vertical lines smoothly
     fog_height = 200 if not self._is_mici else 100
-    for i in range(fog_height):
-      alpha = int(255 * (1.0 - (i / fog_height)))
-      fog_color = rl.Color(bg_color.r, bg_color.g, bg_color.b, alpha)
-      rl.draw_line(0, horizon_y + i, w, horizon_y + i, fog_color)
+    fog_transparent = rl.Color(bg_color.r, bg_color.g, bg_color.b, 0)
+    rl.draw_rectangle_gradient_v(0, horizon_y, w, fog_height, bg_color, fog_transparent)
         
     # Draw cyan horizon line with thickness
     rl.draw_line_ex(rl.Vector2(float(0), float(horizon_y)), rl.Vector2(float(w), float(horizon_y)), 4.0 if not self._is_mici else 2.0, horizon_color)
