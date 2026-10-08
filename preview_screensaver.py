@@ -22,6 +22,7 @@ Interactive controls:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 
@@ -70,7 +71,7 @@ class ScreensaverRenderer:
     )
 
 
-def capture_screenshot(device_key: str, out_path: str):
+def capture_screenshot(device_key: str, out_path: str, anim_time: float = 0.0):
   """Headless render and export to PNG with 100% determinism."""
   w, h, title = RESOLUTIONS[device_key]
   logo_file, gp_file = ensure_screensaver_assets()
@@ -83,7 +84,7 @@ def capture_screenshot(device_key: str, out_path: str):
   renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
 
   rl.begin_drawing()
-  renderer.draw(texture, tex_gp, anim_time=0.0, grid_offset=0.0)
+  renderer.draw(texture, tex_gp, anim_time=anim_time, grid_offset=0.0)
   rl.end_drawing()
 
   img = rl.load_image_from_screen()
@@ -93,6 +94,59 @@ def capture_screenshot(device_key: str, out_path: str):
   rl.unload_texture(tex_gp)
   rl.close_window()
   print(f"[✓] Screenshot saved to: {out_path} ({w}x{h})")
+
+
+def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int = 20):
+  """Render a full seamless animation cycle and export as an animated GIF."""
+  try:
+    from PIL import Image
+  except ImportError:
+    print("Error: Pillow is required to export animated GIFs.", file=sys.stderr)
+    return
+
+  w, h, title = RESOLUTIONS[device_key]
+  logo_file, gp_file = ensure_screensaver_assets()
+
+  rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
+  rl.init_window(w, h, title.encode("utf-8"))
+  texture = rl.load_texture(logo_file.encode("utf-8"))
+  tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+
+  renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
+
+  frames = []
+  total_frames = int(duration * fps)
+  temp_frame_path = ".preview_frame_tmp.png"
+
+  for i in range(total_frames):
+    t = i / fps
+    grid_offset = (renderer.grid_speed * t) % renderer.spacing
+    rl.begin_drawing()
+    renderer.draw(texture, tex_gp, anim_time=t, grid_offset=grid_offset)
+    rl.end_drawing()
+
+    img = rl.load_image_from_screen()
+    rl.export_image(img, temp_frame_path.encode("utf-8"))
+    rl.unload_image(img)
+    frames.append(Image.open(temp_frame_path).copy())
+
+  rl.unload_texture(texture)
+  rl.unload_texture(tex_gp)
+  rl.close_window()
+
+  if os.path.exists(temp_frame_path):
+    os.remove(temp_frame_path)
+
+  frames_p = [f.convert("P", palette=Image.ADAPTIVE) for f in frames]
+  frames_p[0].save(
+    out_path,
+    save_all=True,
+    append_images=frames_p[1:],
+    duration=int(1000 / fps),
+    loop=0,
+    optimize=True,
+  )
+  print(f"[✓] Animated GIF saved to: {out_path} ({len(frames)} frames, {w}x{h})")
 
 
 def run_interactive(initial_device: str):
@@ -169,16 +223,40 @@ def main():
     default=None,
     help="Capture screenshot headlessly and exit. Optional output file path.",
   )
+  parser.add_argument(
+    "--time",
+    "-t",
+    type=float,
+    default=0.0,
+    help="Animation timestamp in seconds for static screenshot capture (default: 0.0)",
+  )
+  parser.add_argument(
+    "--gif",
+    "-g",
+    nargs="?",
+    const="auto",
+    default=None,
+    help="Capture seamless animated GIF cycle and exit. Optional output file path.",
+  )
 
   args = parser.parse_args()
 
+  if args.gif:
+    if args.all:
+      capture_gif("comma3x", "preview_comma3x.gif")
+      capture_gif("comma4", "preview_comma4.gif")
+    else:
+      out_gif = args.gif if args.gif != "auto" else f"preview_{args.device}.gif"
+      capture_gif(args.device, out_gif)
+    return
+
   if args.screenshot:
     if args.all:
-      capture_screenshot("comma3x", "preview_comma3x.png")
-      capture_screenshot("comma4", "preview_comma4.png")
+      capture_screenshot("comma3x", "preview_comma3x.png", anim_time=args.time)
+      capture_screenshot("comma4", "preview_comma4.png", anim_time=args.time)
     else:
       out_file = args.screenshot if args.screenshot != "auto" else f"preview_{args.device}.png"
-      capture_screenshot(args.device, out_file)
+      capture_screenshot(args.device, out_file, anim_time=args.time)
     return
 
   if args.all:

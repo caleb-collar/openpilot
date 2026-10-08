@@ -57,6 +57,34 @@ def ensure_screensaver_assets() -> tuple[str, str]:
   return R_LOGO_PATH, GARYPILOT_LOGO_PATH
 
 
+def draw_diamond_star(cx: float, cy: float, size: float, alpha: float) -> None:
+  """Draw an authentic 4-pointed retro chrome specular star glint."""
+  if size <= 0.5 or alpha <= 0.01:
+    return
+  a = int(alpha * 255)
+  c = rl.Color(255, 255, 255, a)
+  glow_c = rl.Color(180, 230, 255, int(alpha * 130))
+
+  # Ambient soft glow halo behind the star
+  rl.draw_circle(int(cx), int(cy), size * 0.55, glow_c)
+
+  # 4 tapered diamond spikes along the primary axes
+  w = max(1.2, size * 0.14)
+  rl.draw_triangle(rl.Vector2(cx, cy - size), rl.Vector2(cx - w, cy), rl.Vector2(cx + w, cy), c)
+  rl.draw_triangle(rl.Vector2(cx, cy + size), rl.Vector2(cx + w, cy), rl.Vector2(cx - w, cy), c)
+  rl.draw_triangle(rl.Vector2(cx - size, cy), rl.Vector2(cx, cy + w), rl.Vector2(cx, cy - w), c)
+  rl.draw_triangle(rl.Vector2(cx + size, cy), rl.Vector2(cx, cy - w), rl.Vector2(cx, cy + w), c)
+
+  # 45-degree diagonal secondary rays
+  diag = size * 0.42
+  dw = max(1.0, size * 0.08)
+  rl.draw_line_ex(rl.Vector2(cx - diag, cy - diag), rl.Vector2(cx + diag, cy + diag), dw, c)
+  rl.draw_line_ex(rl.Vector2(cx - diag, cy + diag), rl.Vector2(cx + diag, cy - diag), dw, c)
+
+  # Brilliant center core
+  rl.draw_circle(int(cx), int(cy), max(1.0, size * 0.2), rl.Color(255, 255, 255, a))
+
+
 def draw_screensaver(
   w: int,
   h: int,
@@ -259,7 +287,7 @@ def draw_screensaver(
     horizon_color,
   )
 
-  # Draw GaryPilot pixel art badge centered in the lower half of the screen
+  # Draw GaryPilot badge centered in the lower half with subtle synthwave animations
   if gp_texture is not None:
     gp_w = gp_texture.width
     gp_h = gp_texture.height
@@ -268,10 +296,47 @@ def draw_screensaver(
     badge_h = float(int(gp_h * gp_scale))
     gp_x = float(center_x - int(badge_w / 2))
     lower_half_center_y = horizon_y + (h - horizon_y) // 2
-    gp_y = float(lower_half_center_y - int(badge_h / 2))
+
+    # 1. Weightless organic hover float (seamless 4.0s cycle)
+    float_amp = 2.5 if is_mici else 10.0
+    float_y = math.sin(anim_time * (math.pi / 2.0)) * float_amp
+    gp_y = float(lower_half_center_y - int(badge_h / 2)) + float_y
+
     dest = rl.Rectangle(gp_x, gp_y, badge_w, badge_h)
     source = rl.Rectangle(0.0, 0.0, float(gp_w), float(gp_h))
-    rl.draw_texture_pro(gp_texture, source, dest, rl.Vector2(0.0, 0.0), 0.0, rl.WHITE)
+
+    # 2. Breathing luminescence pulse (seamless 2.0s cycle)
+    glow_pulse = 0.92 + 0.08 * math.sin(anim_time * math.pi)
+    tint_alpha = int(255 * glow_pulse)
+    rl.draw_texture_pro(
+      gp_texture,
+      source,
+      dest,
+      rl.Vector2(0.0, 0.0),
+      0.0,
+      rl.Color(255, 255, 255, tint_alpha),
+    )
+
+    # 3. Specular glint star sparkles on chrome glyph highlights (seamless 4.0s loop)
+    cycle_len = 4.0
+    cycle_t = anim_time % cycle_len
+    sparkle_dur = 0.55
+    sparkle_spots = [
+      (0.4, 0.065, 0.24),  # 'G' corner
+      (1.8, 0.438, 0.22),  # 'P' apex
+      (3.0, 0.738, 0.24),  # '0' apex
+    ]
+    star_base_size = 15.0 if is_mici else 60.0
+    for t_start, rx, ry in sparkle_spots:
+      dt = cycle_t - t_start
+      if 0.0 <= dt < sparkle_dur:
+        progress = dt / sparkle_dur
+        flare = math.sin(progress * math.pi)
+        size = star_base_size * flare
+        alpha = min(1.0, flare * 1.5)
+        sp_x = gp_x + badge_w * rx
+        sp_y = gp_y + badge_h * ry
+        draw_diamond_star(sp_x, sp_y, size, alpha)
 
 
 class ScreenSaverSP(Widget):

@@ -12,8 +12,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
-### Added
-
+- Added subtle synthwave screensaver animations to the GaryPilot typography badge: weightless organic hover floating (seamless 4.0s sine cycle), breathing luminescence glow pulse (seamless 2.0s sine cycle), and authentic 4-pointed retro diamond star specular glints cycling across letter highlights ('G', 'P', '0') on Comma 4 and Comma 3X.
+- Added animated GIF export (`--gif`) and timestamped screenshot capture (`--time`) to `preview_screensaver.py` for headless verification and seamless loop inspection.
 - Updated GaryPilot screensaver badge with enlarged, clean anti-aliased chrome typography and an ethereal soft luminous glow: rendered at font size 46 with 2x supersampling for pristine vector letterforms with natural geometry, brilliant white and metallic silver fill, multi-tier soft white/silver halo (replacing the previous hard border), and a soft ambient drop shadow to smoothly dim perspective grid lines behind the text.
 - Enhanced screensaver badge generation: programmatic Audiowide font and version rendering now runs dynamically at runtime in `screen_saver.py` when Pillow is available, with seamless fallback to pre-rendered embedded base64 assets (`generate_screensaver_badge.py`) for minimal and headless device environments.
 - Restored authentic Rivian compass emblem bytes to the screensaver retro sun with clean PNG headers and exact 92x91 active bounding box within 128x128 canvas, eliminating sky blowout and preserving starry night views on Comma 4 and Comma 3X.
