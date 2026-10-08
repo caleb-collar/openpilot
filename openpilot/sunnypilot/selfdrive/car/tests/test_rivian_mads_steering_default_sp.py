@@ -141,3 +141,37 @@ class TestRivianMadsSteeringDefault:
     # TypeError. This has bitten this branch before, on MadsMinEngageSpeed.
     fake = _construct(monkeypatch, None, REMAIN_ACTIVE)
     assert isinstance(_mode_writes(fake)[0], int)
+
+
+def _construct_real(monkeypatch, tmp_path, car_params_persistent):
+  """Build one CarStateExt against the REAL Params, backed by a throwaway directory.
+
+  FakeParams can only prove the call pattern; it cannot prove the methods exist or the types
+  are accepted. An earlier revision called params.put_int(), which this Params class does not
+  have, so card would have raised AttributeError at startup on every fresh-default device.
+  """
+  real_params = params_module.Params
+  path = str(tmp_path / "params")
+  store = real_params(path)
+  if car_params_persistent is not None:
+    store.put("CarParamsPersistent", car_params_persistent, block=True)  # non-blocking put is async
+  monkeypatch.setattr(params_module, "Params", lambda: real_params(path))
+  monkeypatch.setattr(carstate_ext, "Params", lambda: real_params(path), raising=False)
+
+  CP = structs.CarParams.new_message()
+  CP.brand = 'rivian'
+  ext = CarStateExt.__new__(CarStateExt)
+  CarStateExt.__init__(ext, CP, structs.CarParamsSP())
+  return ext, real_params(path)
+
+
+class TestRivianMadsSteeringDefaultRealParams:
+  def test_fresh_install_seeds_disengage(self, monkeypatch, tmp_path):
+    ext, store = _construct_real(monkeypatch, tmp_path, None)
+    assert store.get("MadsSteeringMode") == DISENGAGE
+    assert ext.steering_mode_on_brake == DISENGAGE
+
+  def test_existing_install_is_untouched(self, monkeypatch, tmp_path):
+    ext, store = _construct_real(monkeypatch, tmp_path, b"cp")
+    assert store.get("MadsSteeringMode", return_default=True) == REMAIN_ACTIVE
+    assert ext.steering_mode_on_brake == REMAIN_ACTIVE
