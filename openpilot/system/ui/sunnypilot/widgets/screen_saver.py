@@ -119,7 +119,7 @@ class ScreenSaverSP(Widget):
       # Logo as the Sun
       tex_w = self.texture.width
       tex_h = self.texture.height
-      scale = 6.5 if not self._is_mici else 3.5
+      scale = 8.5 if not self._is_mici else 4.5
       
       dest = rl.Rectangle(float(center_x - (tex_w * scale) / 2), float(horizon_y - (tex_h * scale) / 2), float(tex_w * scale), float(tex_h * scale))
       source = rl.Rectangle(0.0, 0.0, float(tex_w), float(tex_h))
@@ -171,14 +171,14 @@ class ScreenSaverSP(Widget):
             # Black fill
             rl.draw_triangle(
                 rl.Vector2(float(px), float(horizon_y + y_offset)),
-                rl.Vector2(float(px), float(py)),
                 rl.Vector2(float(cx), float(horizon_y + y_offset)),
+                rl.Vector2(float(px), float(py)),
                 bg_color
             )
             rl.draw_triangle(
                 rl.Vector2(float(px), float(py)),
-                rl.Vector2(float(cx), float(cy)),
                 rl.Vector2(float(cx), float(horizon_y + y_offset)),
+                rl.Vector2(float(cx), float(cy)),
                 bg_color
             )
             # Outline
