@@ -12,6 +12,11 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+### Documentation
+
+- Added comprehensive **Integration, Behavior & Safety Matrix** to `README.md`:
+  - Detailed cross-reference table covering regenerative braking vs. physical friction brake blending, steering wheel follow distance cycling, ACC set speed step logic, native front radar sensor fusion (`radard.py`), corner radar blind spot detection (`AutoLaneChangeBsmDelay`), Dynamic Experimental Control (DEC) Kalman filter smoothing, WMI V12 driving model execution at 20Hz, Smart Cruise Control curve slowdowns, gear-stalk MADS lifecycle, and panda hardware safety limits with direct code references.
+
 ## [0.2.2] - 2026-10-08
 
 ### Added
