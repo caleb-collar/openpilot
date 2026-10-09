@@ -34,6 +34,15 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
   - Added `ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Stock AEB: Risk of Collision")` to `EventName.stockAeb` in `openpilot/selfdrive/selfdrived/events.py`: forces `controlsd` to immediately transition to `disabled` with an audible alert, resetting integrators and preventing dangerous post-AEB acceleration snapback.
   - Enforced `CC.cruiseControl.cancel = True` alongside `CC.enabled = False` in `opendbc_repo/opendbc/sunnypilot/car/rivian/mads.py` (`MadsCarController.update`): immediately halts openpilot acceleration requests while vehicle Bosch ESP executes emergency braking.
   - Preserved openpilot's native hold state machine without standstill spoofing or high-frequency param polling, preventing unexpected creep in intersection stop-and-go scenarios.
+- Fixed virtual parameter erasure by C++ `Params::clearAll`:
+  - Relocated virtual parameter persistence to a dedicated `.virtual/` subdirectory within the parameters directory. Because C++ `Params::clearAll` skips directory entries (`de->d_type == DT_DIR`), virtual parameters are protected from being unlinked during manager startup (`CLEAR_ON_MANAGER_START`) or onroad/offroad drive transitions.
+  - Added seamless automatic migration from legacy root parameter paths into `.virtual/`.
+  - Scoped cache keys to the canonical parameter path (`self.get_param_path()`) and implemented 100 ms polling for `block=True` virtual parameter reads.
+- Fixed UI dialog crashes in on-device Rivian settings:
+  - Replaced non-existent `gui_app.show_dialog` with `gui_app.push_widget(dlg)` and instantiated `ConfirmDialog` with `rich=True` and keyword `callback=` to avoid callback misinterpretation.
+- Fixed bitwise filtering in `all_keys` to ensure virtual parameters with `ParamKeyFlag.BACKUP` are discovered by Sunnylink cloud backup RPCs.
+- Hardened `_initialize_rivian` in `interfaces.py` against `None` values in car interface params dictionaries.
+- Expanded Sunnylink device telemetry in `capabilities.py` to accurately report `stock_longitudinal` for Rivian vehicles.
 
 ## [0.2.1] - 2026-10-08
 

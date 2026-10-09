@@ -172,7 +172,7 @@ def _initialize_toyota(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params
 
 def _initialize_rivian(CP: structs.CarParams, CP_SP: structs.CarParamsSP, params_dict: dict[str, str]) -> None:
   if CP.brand == 'rivian':
-    rivian_stock_long = int(params_dict.get("RivianEnforceStockLongitudinal", 0)) == 1
+    rivian_stock_long = int(params_dict.get("RivianEnforceStockLongitudinal") or 0) == 1
     if rivian_stock_long:
       CP.alphaLongitudinalAvailable = False
       CP.openpilotLongitudinalControl = False

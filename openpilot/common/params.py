@@ -40,7 +40,7 @@ VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
   b"RivianEnforceStockLongitudinal": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
 }
 
-# In-memory virtual param cache mapping (param_dir, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
+# In-memory virtual param cache mapping (param_path, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
 _virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}
 
 
@@ -138,16 +138,28 @@ class Params:
   def __reduce__(self):
     return (type(self), (self.d,))
 
+  def _virtual_param_path(self, k: bytes) -> Path:
+    return Path(self.get_param_path()) / ".virtual" / k.decode()
+
   def clear_all(self, tx_flag=ParamKeyFlag.ALL):
     params_clear_all(self.p, int(tx_flag))
     if tx_flag == ParamKeyFlag.ALL:
       _virtual_cache.clear()
       try:
-        p = Path(self.get_param_path())
         for k in VIRTUAL_PARAMS:
-          (p / k.decode()).unlink(missing_ok=True)
+          self._virtual_param_path(k).unlink(missing_ok=True)
+          (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
       except Exception:
         pass
+    else:
+      for k, meta in VIRTUAL_PARAMS.items():
+        if meta[1] & tx_flag:
+          _virtual_cache.pop((self.get_param_path(), k), None)
+          try:
+            self._virtual_param_path(k).unlink(missing_ok=True)
+            (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
+          except Exception:
+            pass
 
   def check_key(self, key):
     key = ensure_bytes(key)
@@ -183,27 +195,45 @@ class Params:
     t = self.get_type(k)
     default = self._default(k) if return_default else None
     if k in VIRTUAL_PARAMS:
-      cache_key = (self.d, k)
-      now = time.monotonic()
-      cached = _virtual_cache.get(cache_key)
-      if cached is not None:
-        mtime_ns, val, cache_time = cached
-        if val is None and (now - cache_time < 0.5):
-          return self._cpp2python(t, default, None, key)
-      try:
-        p = Path(self.get_param_path()) / k.decode()
-        stat = p.stat()
-        mtime_ns = stat.st_mtime_ns
-        if cached is not None and cached[0] == mtime_ns and cached[1] is not None:
-          value = cached[1]
-        else:
-          value = p.read_bytes()
-          _virtual_cache[cache_key] = (mtime_ns, value, now)
-      except FileNotFoundError:
-        _virtual_cache[cache_key] = (0, None, now)
-        value = default
-      except Exception:
-        value = default
+      cache_key = (self.get_param_path(), k)
+      while True:
+        now = time.monotonic()
+        cached = _virtual_cache.get(cache_key)
+        if cached is not None:
+          mtime_ns, val, cache_time = cached
+          if val is not None:
+            return self._cpp2python(t, val, default, key)
+          elif not block and (now - cache_time < 0.5):
+            return self._cpp2python(t, default, None, key)
+
+        target = self._virtual_param_path(k)
+        if not target.exists():
+          legacy_target = Path(self.get_param_path()) / k.decode()
+          if legacy_target.exists():
+            try:
+              target.parent.mkdir(parents=True, exist_ok=True)
+              os.replace(legacy_target, target)
+            except Exception:
+              pass
+
+        try:
+          stat = target.stat()
+          mtime_ns = stat.st_mtime_ns
+          if cached is not None and cached[0] == mtime_ns and cached[1] is not None:
+            value = cached[1]
+          else:
+            value = target.read_bytes()
+            _virtual_cache[cache_key] = (mtime_ns, value, now)
+        except FileNotFoundError:
+          _virtual_cache[cache_key] = (0, None, now)
+          value = default
+        except Exception:
+          value = default
+
+        if value is not None or not block:
+          break
+        time.sleep(0.1)
+
       if value == b"":
         return self._cpp2python(t, default, None, key)
       return self._cpp2python(t, value, default, key)
@@ -229,9 +259,9 @@ class Params:
     k = self.check_key(key)
     value = self._put_cast(k, dat)
     if k in VIRTUAL_PARAMS:
-      p = Path(self.get_param_path())
+      target = self._virtual_param_path(k)
+      p = target.parent
       p.mkdir(parents=True, exist_ok=True)
-      target = p / k.decode()
       tmp_name = None
       try:
         with tempfile.NamedTemporaryFile("wb", dir=p, delete=False) as tf:
@@ -241,6 +271,10 @@ class Params:
           tmp_name = tf.name
         os.replace(tmp_name, target)
         tmp_name = None  # replaced successfully
+        try:
+          (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
+        except Exception:
+          pass
         if sys.platform != "win32":
           try:
             dir_fd = os.open(str(p), os.O_RDONLY | os.O_DIRECTORY)
@@ -251,9 +285,9 @@ class Params:
           except Exception:
             pass
         try:
-          _virtual_cache[(self.d, k)] = (target.stat().st_mtime_ns, value, time.monotonic())
+          _virtual_cache[(self.get_param_path(), k)] = (target.stat().st_mtime_ns, value, time.monotonic())
         except Exception:
-          _virtual_cache.pop((self.d, k), None)
+          _virtual_cache.pop((self.get_param_path(), k), None)
       except Exception as e:
         cloudlog.warning(f"Failed to persist virtual param {key}: {e}")
       finally:
@@ -276,10 +310,11 @@ class Params:
     k = self.check_key(key)
     if k in VIRTUAL_PARAMS:
       try:
+        self._virtual_param_path(k).unlink(missing_ok=True)
         (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
       except Exception:
         pass
-      _virtual_cache.pop((self.d, k), None)
+      _virtual_cache.pop((self.get_param_path(), k), None)
       return
     params_remove(self.p, self.check_key(key))
 
