@@ -1805,7 +1805,7 @@
               "widget": "toggle",
               "needs_onroad_cycle": true,
               "title": "sunnypilot Longitudinal Control (Alpha)",
-              "description": "WARNING: sunnypilot longitudinal control is in alpha for this car and will disable Automatic Emergency Braking (AEB). On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on.",
+              "description": "WARNING: sunnypilot longitudinal control is in alpha. On platforms without separate AEB channels, native AEB may be disabled. On Rivian R1 with XNOR XTREME hardware, factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention. On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on.",
               "visibility": [
                 {
                   "type": "all",
@@ -2177,6 +2177,69 @@
               "equals": true
             }
           ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "capability",
+              "field": "has_longitudinal_control",
+              "equals": true
+            }
+          ]
+        }
+      ]
+    },
+    "rivian": {
+      "title": "Rivian Settings",
+      "description": "Custom vehicle dynamics and safety integration for Rivian R1 vehicles on GaryPilot.",
+      "items": [
+        {
+          "key": "RivianAebGuard",
+          "widget": "toggle",
+          "title": "Direct ESP AEB Safety Guard",
+          "description": "Ensures openpilot instantly relinquishes longitudinal control whenever factory Automatic Emergency Braking (AEB) intervenes, allowing the vehicle Bosch ESP unit full braking authority without delay.",
+          "enablement": [
+            {
+              "type": "offroad_only"
+            }
+          ]
+        },
+        {
+          "key": "RivianRegenDecel",
+          "widget": "multiple_button",
+          "title": "Regenerative Braking Deceleration Blend",
+          "description": "Adjusts how openpilot blends deceleration to take advantage of Rivian strong native regenerative braking before demanding friction braking.",
+          "options": [
+            {
+              "value": 0,
+              "label": "Smooth (EV Regen)"
+            },
+            {
+              "value": 1,
+              "label": "Standard"
+            },
+            {
+              "value": 2,
+              "label": "Dynamic"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "offroad_only"
+            },
+            {
+              "type": "capability",
+              "field": "has_longitudinal_control",
+              "equals": true
+            }
+          ]
+        },
+        {
+          "key": "RivianStopAndGoAutoResume",
+          "widget": "toggle",
+          "title": "Stop and Go Auto-Resume",
+          "description": "Automatically resumes acceleration when lead vehicle departs from a complete standstill without requiring an accelerator pedal press.",
           "enablement": [
             {
               "type": "offroad_only"

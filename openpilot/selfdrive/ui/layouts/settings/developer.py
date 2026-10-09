@@ -23,7 +23,9 @@ DESCRIPTIONS = {
     "other than your own. A comma employee will NEVER ask you to add their GitHub username."
   ),
   'alpha_longitudinal': tr_noop(
-    "<b>WARNING: sunnypilot longitudinal control is in alpha for this car and may disable Automatic Emergency Braking (AEB).</b><br><br>" +
+    "<b>WARNING: sunnypilot longitudinal control is in alpha.</b><br><br>" +
+    "On platforms without separate AEB channels, native AEB may be disabled. " +
+    "On Rivian R1 with XNOR XTREME hardware, factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention.<br><br>" +
     "On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. " +
     "Enable this to switch to sunnypilot longitudinal control. " +
     "Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. " +

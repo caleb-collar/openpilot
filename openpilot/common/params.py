@@ -31,6 +31,15 @@ class ParamKeyType(IntEnum):
   BYTES = 6
 
 
+# Virtual parameters supported for fork-specific platforms (e.g. Rivian R1 on GaryPilot)
+# without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
+VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
+  b"RivianAebGuard": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
+  b"RivianRegenDecel": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
+  b"RivianStopAndGoAutoResume": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
+}
+
+
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
 lib = ctypes.CDLL(Path(__file__).with_name(f"libparams_c{_suffix}"))
 
@@ -130,6 +139,8 @@ class Params:
 
   def check_key(self, key):
     key = ensure_bytes(key)
+    if key in VIRTUAL_PARAMS:
+      return key
     if b"\0" in key or not params_check_key(self.p, key):
       raise UnknownKeyName(key)
     return key
@@ -150,12 +161,25 @@ class Params:
       return self._cpp2python(t, default, None, key)
 
   def _default(self, key):
+    k = self.check_key(key)
+    if k in VIRTUAL_PARAMS:
+      return VIRTUAL_PARAMS[k][2]
     return _copy_string(params_get_default(self.p, key))
 
   def get(self, key, block=False, return_default=False):
     k = self.check_key(key)
     t = self.get_type(k)
     default = self._default(k) if return_default else None
+    if k in VIRTUAL_PARAMS:
+      try:
+        p = Path(self.get_param_path()) / k.decode()
+        if p.exists():
+          value = p.read_bytes()
+        else:
+          value = VIRTUAL_PARAMS[k][2]
+      except Exception:
+        value = VIRTUAL_PARAMS[k][2]
+      return self._cpp2python(t, value, default, key)
     value = _copy_string(params_get(self.p, k, block))
     if value == b"":
       if block:
@@ -164,6 +188,10 @@ class Params:
     return self._cpp2python(t, value, default, key)
 
   def get_bool(self, key, block=False):
+    k = self.check_key(key)
+    if k in VIRTUAL_PARAMS:
+      val = self.get(k, block)
+      return bool(val) if val is not None else (VIRTUAL_PARAMS[k][2] == b"1")
     return bool(params_get_bool(self.p, self.check_key(key), block))
 
   def _put_cast(self, key, dat):
@@ -173,12 +201,31 @@ class Params:
     """Write a parameter. block=True waits until it is persisted to disk."""
     k = self.check_key(key)
     value = self._put_cast(k, dat)
+    if k in VIRTUAL_PARAMS:
+      try:
+        p = Path(self.get_param_path())
+        p.mkdir(parents=True, exist_ok=True)
+        (p / k.decode()).write_bytes(value)
+      except Exception as e:
+        cloudlog.warning(f"Failed to persist virtual param {key}: {e}")
+      return
     params_put(self.p, k, value, len(value), block)
 
   def put_bool(self, key, val, block=False):
+    k = self.check_key(key)
+    if k in VIRTUAL_PARAMS:
+      self.put(k, "1" if val else "0", block)
+      return
     params_put_bool(self.p, self.check_key(key), val, block)
 
   def remove(self, key):
+    k = self.check_key(key)
+    if k in VIRTUAL_PARAMS:
+      try:
+        (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
+      except Exception:
+        pass
+      return
     params_remove(self.p, self.check_key(key))
 
   def get_param_path(self, key=""):
@@ -186,18 +233,22 @@ class Params:
     return _copy_string(params_get_path(self.p, key, len(key))).decode()
 
   def get_type(self, key):
+    k = self.check_key(key)
+    if k in VIRTUAL_PARAMS:
+      return VIRTUAL_PARAMS[k][0]
     return ParamKeyType(params_get_key_type(self.p, self.check_key(key)))
 
   def all_keys(self, flag=ParamKeyFlag.ALL):
+    virtual_keys = [k for k, meta in VIRTUAL_PARAMS.items() if (meta[1] & flag) == meta[1] or flag == ParamKeyFlag.ALL]
     if flag == ParamKeyFlag.ALL:
       keys = []
       for i in range(params_keys_size(self.p)):
         keys.append(_copy_string(params_key_at(self.p, i)))
-      return keys
+      return keys + virtual_keys
     max_keys = 1024
     buf = (ParamsBuffer * max_keys)()
     count = params_keys_by_flag(self.p, int(flag), buf, max_keys)
-    return [_copy_string(buf[i]) for i in range(min(count, max_keys))]
+    return [_copy_string(buf[i]) for i in range(min(count, max_keys))] + virtual_keys
 
   def get_default_value(self, key):
     k = self.check_key(key)

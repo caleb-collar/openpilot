@@ -35,4 +35,9 @@ class MadsCarController:
     return MadsDataSP(self.lka_icon_states, self.lat_active)
 
   def update(self, CC: structs.CarControl, CC_SP: structs.CarControlSP, CS: CarStateBase) -> None:
+    # Direct ESP AEB Safety Guard: if factory AEB activates, immediately relinquish openpilot
+    # longitudinal authority so the vehicle Bosch ESP unit has full unobstructed braking control.
+    if getattr(CS.out, "stockAeb", False):
+      CC.enabled = False
+
     self.mads = self.mads_status_update(CC, CC_SP, CS)
