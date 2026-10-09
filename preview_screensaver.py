@@ -35,7 +35,6 @@ except ImportError:
 from openpilot.system.ui.sunnypilot.widgets.screen_saver import (
   draw_screensaver,
   ensure_screensaver_assets,
-  load_screensaver_texture,
 )
 
 RESOLUTIONS = {
@@ -85,12 +84,11 @@ def capture_screenshot(device_key: str, out_path: str, anim_time: float = 0.0):
   w, h, title = RESOLUTIONS[device_key]
   logo_file, gp_file, vehicle_file = ensure_screensaver_assets()
 
-  if hasattr(rl, "set_config_flags") and hasattr(rl, "ConfigFlags"):
-    rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
+  rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
   rl.init_window(w, h, title.encode("utf-8"))
-  texture = load_screensaver_texture(logo_file)
-  tex_gp = load_screensaver_texture(gp_file)
-  tex_vehicle = load_screensaver_texture(vehicle_file)
+  texture = rl.load_texture(logo_file.encode("utf-8"))
+  tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+  tex_vehicle = rl.load_texture(vehicle_file.encode("utf-8"))
 
   renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
 
@@ -101,9 +99,9 @@ def capture_screenshot(device_key: str, out_path: str, anim_time: float = 0.0):
   img = rl.load_image_from_screen()
   rl.export_image(img, out_path.encode("utf-8"))
   rl.unload_image(img)
-  for tex in (texture, tex_gp, tex_vehicle):
-    if tex is not None and getattr(tex, "id", 0) > 0:
-      rl.unload_texture(tex)
+  rl.unload_texture(texture)
+  rl.unload_texture(tex_gp)
+  rl.unload_texture(tex_vehicle)
   rl.close_window()
   print(f"[✓] Screenshot saved to: {out_path} ({w}x{h})")
 
@@ -119,12 +117,11 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
   w, h, title = RESOLUTIONS[device_key]
   logo_file, gp_file, vehicle_file = ensure_screensaver_assets()
 
-  if hasattr(rl, "set_config_flags") and hasattr(rl, "ConfigFlags"):
-    rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
+  rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_HIDDEN)
   rl.init_window(w, h, title.encode("utf-8"))
-  texture = load_screensaver_texture(logo_file)
-  tex_gp = load_screensaver_texture(gp_file)
-  tex_vehicle = load_screensaver_texture(vehicle_file)
+  texture = rl.load_texture(logo_file.encode("utf-8"))
+  tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+  tex_vehicle = rl.load_texture(vehicle_file.encode("utf-8"))
 
   renderer = ScreensaverRenderer(w, h, is_comma4=(device_key == "comma4"))
 
@@ -144,9 +141,9 @@ def capture_gif(device_key: str, out_path: str, duration: float = 4.0, fps: int 
     rl.unload_image(img)
     frames.append(Image.open(temp_frame_path).copy())
 
-  for tex in (texture, tex_gp, tex_vehicle):
-    if tex is not None and getattr(tex, "id", 0) > 0:
-      rl.unload_texture(tex)
+  rl.unload_texture(texture)
+  rl.unload_texture(tex_gp)
+  rl.unload_texture(tex_vehicle)
   rl.close_window()
 
   if os.path.exists(temp_frame_path):
@@ -176,9 +173,9 @@ def run_interactive(initial_device: str):
 
     rl.init_window(w, h, display_title.encode("utf-8"))
     rl.set_target_fps(60)
-    texture = load_screensaver_texture(logo_file)
-    tex_gp = load_screensaver_texture(gp_file)
-    tex_vehicle = load_screensaver_texture(vehicle_file)
+    texture = rl.load_texture(logo_file.encode("utf-8"))
+    tex_gp = rl.load_texture(gp_file.encode("utf-8"))
+    tex_vehicle = rl.load_texture(vehicle_file.encode("utf-8"))
     renderer = ScreensaverRenderer(w, h, is_comma4)
 
     switch_to = None
@@ -199,9 +196,9 @@ def run_interactive(initial_device: str):
         rl.take_screenshot(shot_name.encode("utf-8"))
         print(f"[✓] Screenshot saved: {shot_name}")
       elif rl.is_key_pressed(rl.KeyboardKey.KEY_Q):
-        for tex in (texture, tex_gp, tex_vehicle):
-          if tex is not None and getattr(tex, "id", 0) > 0:
-            rl.unload_texture(tex)
+        rl.unload_texture(texture)
+        rl.unload_texture(tex_gp)
+        rl.unload_texture(tex_vehicle)
         rl.close_window()
         return
 
@@ -209,9 +206,9 @@ def run_interactive(initial_device: str):
       renderer.draw(texture, tex_gp, tex_vehicle)
       rl.end_drawing()
 
-    for tex in (texture, tex_gp, tex_vehicle):
-      if tex is not None and getattr(tex, "id", 0) > 0:
-        rl.unload_texture(tex)
+    rl.unload_texture(texture)
+    rl.unload_texture(tex_gp)
+    rl.unload_texture(tex_vehicle)
     rl.close_window()
 
     if switch_to:

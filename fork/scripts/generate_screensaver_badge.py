@@ -26,11 +26,8 @@ import sys
 try:
   from PIL import Image, ImageDraw, ImageFilter, ImageFont
 except ImportError:
-  if __name__ == "__main__":
-    print("Error: Pillow is required to run the badge generator. Install with: pip install Pillow", file=sys.stderr)
-    sys.exit(1)
-  else:
-    raise
+  print("Error: Pillow is required to run the badge generator. Install with: pip install Pillow", file=sys.stderr)
+  sys.exit(1)
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FONT_PATH = os.path.join(REPO_ROOT, "openpilot", "selfdrive", "assets", "fonts", "Audiowide-Regular.ttf")
