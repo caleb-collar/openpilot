@@ -12,6 +12,16 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-08
+
+### Fixed
+
+- Decoupled MADS steering mode enablement from cruise engagement in the sunnylink schema:
+  - Added `mads_full_steering_platforms` macro in `_macros.yaml` allowing Rivian full access to all steering modes on brake (`Remain Active`, `Pause`, `Disengage`).
+  - Updated `MadsSteeringMode` options in `steering.yaml` to reference `mads_full_steering_platforms`, eliminating the false lockout that previously disabled `Remain Active` and `Pause` in the sunnylink web portal.
+  - Preserved `mads_full_platforms` for `MadsMainCruiseAllowed` (forced off) and `MadsUnifiedEngagementMode` (forced on) to match Rivian stalk hardware constraints.
+  - Recompiled canonical `settings_ui.json` and added regression tests in `test_settings_changes.py`.
+
 ## [0.2.0] - 2026-10-08
 
 - Replaced the screensaver version number with an authentic driving pixel art vehicle cruising forward on the Outrun perspective grid: features signature coast-to-coast red LED lightbar with stadium pill capsules, warm sunset rear glass reflections, yellow recovery hooks, cyan glowing license plate, road suspension micro-rumble (15 Hz), gentle lane cruise sway (seamless 4.0s cycle), cyan underbody neon glow, and red taillight ambient bloom across Comma 4 (536x240) and Comma 3X (2160x1080 integer scaling).
@@ -72,6 +82,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.0...GaryPilot
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.1...GaryPilot
+[0.2.1]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.0...r1-v0.2.1
 [0.2.0]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-v0.2.0
 [0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0
