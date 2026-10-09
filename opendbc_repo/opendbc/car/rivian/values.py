@@ -156,7 +156,8 @@ class CarControllerParams:
     if sensitivity == 0:
       self.STEER_DRIVER_ALLOWANCE = 75
     elif sensitivity == 2:
-      self.STEER_DRIVER_ALLOWANCE = 130
+      # Driver torque allowance cannot exceed panda safety limit (100 in rivian.h)
+      self.STEER_DRIVER_ALLOWANCE = 100
     else:
       self.STEER_DRIVER_ALLOWANCE = 100
 

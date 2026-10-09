@@ -114,39 +114,39 @@ class RivianSettings(BrandSettings):
       # 1. Lateral Angle Harness (0x1310)
       if not cp.dashcamOnly:
         self._angle_status = tr("Connected")
-        self.angle_harness_item.action_item._color = rl.Color(120, 220, 120, 255)
+        self.angle_harness_item.action_item.color = rl.Color(120, 220, 120, 255)
       else:
         self._angle_status = tr("Not Detected")
-        self.angle_harness_item.action_item._color = rl.Color(220, 120, 120, 255)
+        self.angle_harness_item.action_item.color = rl.Color(220, 120, 120, 255)
 
       # 2. Longitudinal Harness Upgrade / XNOR XTREME (0x131a)
       if cp.alphaLongitudinalAvailable:
         self._long_status = tr("Connected")
-        self.long_harness_item.action_item._color = rl.Color(120, 220, 120, 255)
+        self.long_harness_item.action_item.color = rl.Color(120, 220, 120, 255)
       else:
         self._long_status = tr("Not Detected")
-        self.long_harness_item.action_item._color = rl.Color(200, 200, 200, 255)
+        self.long_harness_item.action_item.color = rl.Color(200, 200, 200, 255)
 
       # 3. Vehicle Generation
       is_gen2 = bool(cp.flags & RivianFlags.GEN2)
       self._gen_status = tr("Gen 2 (2025+)") if is_gen2 else tr("Gen 1 (2022–2024)")
-      self.platform_gen_item.action_item._color = rl.Color(220, 220, 220, 255)
+      self.platform_gen_item.action_item.color = rl.Color(220, 220, 220, 255)
 
       # 4. Front Radar
       if not cp.radarUnavailable:
         self._radar_status = tr("32 Tracks Active")
-        self.radar_item.action_item._color = rl.Color(120, 220, 120, 255)
+        self.radar_item.action_item.color = rl.Color(120, 220, 120, 255)
       else:
         self._radar_status = tr("Unavailable")
-        self.radar_item.action_item._color = rl.Color(200, 200, 200, 255)
+        self.radar_item.action_item.color = rl.Color(200, 200, 200, 255)
 
       # 5. Corner Radar BSM
       if cp.enableBsm:
         self._bsm_status = tr("Active")
-        self.bsm_item.action_item._color = rl.Color(120, 220, 120, 255)
+        self.bsm_item.action_item.color = rl.Color(120, 220, 120, 255)
       else:
         self._bsm_status = tr("Not Detected")
-        self.bsm_item.action_item._color = rl.Color(200, 200, 200, 255)
+        self.bsm_item.action_item.color = rl.Color(200, 200, 200, 255)
 
       # Telemetry / Status summary for Sunnylink
       angle_ok = not cp.dashcamOnly

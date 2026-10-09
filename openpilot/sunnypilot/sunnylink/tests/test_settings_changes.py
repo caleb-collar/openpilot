@@ -383,24 +383,132 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     ext_firm = CarStateExt(CP, CP_SP)
     ext_firm.params = FakeParams(2)
     ext_firm._refresh_params()
-    assert ext_firm.steer_driver_allowance == 130
+    assert ext_firm.steer_driver_allowance == 100  # Capped at Panda safety limit of 100
     assert ext_firm.steer_driver_pressed_threshold == 1.30
 
-    # Verify ExternalController uses CS.steer_driver_allowance
+    # Verify ExternalController uses CS.steer_driver_allowance and clamps to Panda safety limit (100)
     class MockCS:
-      def __init__(self):
+      def __init__(self, allowance):
         self.out = structs.CarState()
         self.out.vEgoRaw = 20.0
         self.out.steeringTorque = 50.0
-        self.steer_driver_allowance = 75
+        self.steer_driver_allowance = allowance
 
     erc = ExternalController()
-    cs_mock = MockCS()
+    cs_mock = MockCS(75)
     erc.torque_active = True
     actuators = structs.CarControl.Actuators()
     actuators.torque = 0.5
     erc._update_torque(cs_mock, actuators)
     assert erc.ccp.STEER_DRIVER_ALLOWANCE == 75
+
+    # If CS reports higher than Panda limit, verify it clamps to 100
+    cs_firm = MockCS(130)
+    erc._update_torque(cs_firm, actuators)
+    assert erc.ccp.STEER_DRIVER_ALLOWANCE == 100
+
+  def test_rivian_stalk_sweep_up1_to_up2_no_phantom_release(self):
+    """Sweeping stalk rapidly from neutral through UP_1 to UP_2 must NOT emit phantom release for UP_1."""
+    from opendbc.car import structs
+    from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+
+    CP = structs.CarParams.new_message()
+    CP.brand = "rivian"
+    CP_SP = structs.CarParamsSP()
+    ext = CarStateExt(CP, CP_SP)
+    # Configure Action 2 ("Disengage All")
+    ext.stalk_up1_action = 2
+
+    class MockParser:
+      def __init__(self, val):
+        self.vl = {"VDM_AdasSts": {"VDM_UserAdasRequest": val}}
+
+    ret = structs.CarState.new_message()
+
+    # Frame 1: Stalk hits UP_1 detent (vdm = 1)
+    parsers_1 = {"pt": MockParser(1)}
+    events_1 = ext.update_stalk_controls(ret, parsers_1)
+    # In frame 1, UP_1 is pending (lookahead to see if it sweeps to UP_2)
+    assert len(events_1) == 0
+    assert ext._lkas_pending is True
+    assert ext._up1_pressed is False
+
+    # Frame 2: Stalk advances to UP_2 detent (vdm = 2)
+    parsers_2 = {"pt": MockParser(2)}
+    events_2 = ext.update_stalk_controls(ret, parsers_2)
+    # Must emit ONLY altButton2 (pressed=True) for UP_2
+    # Must NOT emit cancel(pressed=False) or altButton2(pressed=False)
+    assert ext._lkas_pending is False
+    assert ext._up1_pressed is False
+    assert len(events_2) == 1
+    assert events_2[0].type == structs.CarState.ButtonEvent.Type.altButton2
+    assert events_2[0].pressed is True
+
+    # Frame 3: Stalk held at UP_2 detent (vdm = 2)
+    parsers_3 = {"pt": MockParser(2)}
+    events_3 = ext.update_stalk_controls(ret, parsers_3)
+    assert len(events_3) == 0
+
+    # Frame 4: Stalk released back to neutral (vdm = 0)
+    parsers_4 = {"pt": MockParser(0)}
+    events_4 = ext.update_stalk_controls(ret, parsers_4)
+    assert len(events_4) == 1
+    assert events_4[0].type == structs.CarState.ButtonEvent.Type.altButton2
+    assert events_4[0].pressed is False
+
+  def test_rivian_stalk_up1_normal_click_and_release(self):
+    """Normal UP_1 press and release emits press followed by release."""
+    from opendbc.car import structs
+    from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+
+    CP = structs.CarParams.new_message()
+    CP.brand = "rivian"
+    CP_SP = structs.CarParamsSP()
+    ext = CarStateExt(CP, CP_SP)
+    ext.stalk_up1_action = 2
+
+    class MockParser:
+      def __init__(self, val):
+        self.vl = {"VDM_AdasSts": {"VDM_UserAdasRequest": val}}
+
+    ret = structs.CarState.new_message()
+
+    # Frame 1: vdm = 1
+    ext.update_stalk_controls(ret, {"pt": MockParser(1)})
+    # Frame 2: vdm = 1 (held at UP_1 detent, lookahead resolves)
+    ev2 = ext.update_stalk_controls(ret, {"pt": MockParser(1)})
+    assert len(ev2) == 2  # cancel and altButton2 for Action 2
+    assert all(e.pressed for e in ev2)
+    assert ext._up1_pressed is True
+
+    # Frame 3: vdm = 0 (released)
+    ev3 = ext.update_stalk_controls(ret, {"pt": MockParser(0)})
+    assert len(ev3) == 2
+    assert all(not e.pressed for e in ev3)
+    assert ext._up1_pressed is False
+
+  def test_virtual_params_cross_process_cache_invalidation(self):
+    """Virtual param cache must invalidate when file on disk is modified by another process."""
+    import tempfile
+    from openpilot.common.params import Params, _virtual_cache
+    import time
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+      params = Params(tmp_dir)
+      params.put("RivianStalkUp1Action", 1)
+      assert params.get("RivianStalkUp1Action") == 1
+
+      # Simulate another process directly updating the file on disk
+      target = params._virtual_param_path(b"RivianStalkUp1Action")
+      time.sleep(0.01)
+      target.write_bytes(b"2")
+      cache_key = (params.get_param_path(), b"RivianStalkUp1Action")
+      mtime, val, ctime = _virtual_cache[cache_key]
+      _virtual_cache[cache_key] = (mtime, val, ctime - 1.0)  # simulate past TTL
+
+      # Next get() must detect disk modification and return new value
+      assert params.get("RivianStalkUp1Action") == 2
+
 
 
   def test_longitudinal_control_in_toggles_not_developer(self, schema):

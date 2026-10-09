@@ -238,7 +238,8 @@ class ExternalController:
     limits = CCP
     if hasattr(CS, "steer_driver_allowance"):
       limits = self.ccp
-      self.ccp.STEER_DRIVER_ALLOWANCE = CS.steer_driver_allowance
+      # Panda safety limits driver torque allowance to 100 (modes/rivian.h); never exceed it
+      self.ccp.STEER_DRIVER_ALLOWANCE = min(100, CS.steer_driver_allowance)
     apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last,
                                                     CS.out.steeringTorque, limits, steer_max)
 

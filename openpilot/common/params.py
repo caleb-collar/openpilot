@@ -46,6 +46,28 @@ VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
 # In-memory virtual param cache mapping (param_path, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
 _virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}
 
+_HEADER_KEYS: list[bytes] | None = None
+
+
+def _load_header_keys() -> list[bytes]:
+  global _HEADER_KEYS
+  if _HEADER_KEYS is not None:
+    return _HEADER_KEYS
+  keys: list[bytes] = []
+  header_path = Path(__file__).parent / "params_keys.h"
+  if header_path.exists():
+    try:
+      with open(header_path, "r", encoding="utf-8") as f:
+        for line in f:
+          line = line.strip()
+          if line.startswith('{"') and '",' in line:
+            key_name = line.split('"', 2)[1]
+            keys.append(key_name.encode("utf-8"))
+    except Exception:
+      pass
+  _HEADER_KEYS = keys
+  return _HEADER_KEYS
+
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
 try:
@@ -213,10 +235,11 @@ class Params:
         cached = _virtual_cache.get(cache_key)
         if cached is not None:
           mtime_ns, val, cache_time = cached
-          if val is not None:
-            return self._cpp2python(t, val, default, key)
-          elif not block and (now - cache_time < 0.5):
-            return self._cpp2python(t, default, None, key)
+          if now - cache_time < 0.5:
+            if val is not None:
+              return self._cpp2python(t, val, default, key)
+            elif not block:
+              return self._cpp2python(t, default, None, key)
 
         target = self._virtual_param_path(k)
         if not target.exists():
@@ -233,6 +256,7 @@ class Params:
           mtime_ns = stat.st_mtime_ns
           if cached is not None and cached[0] == mtime_ns and cached[1] is not None:
             value = cached[1]
+            _virtual_cache[cache_key] = (mtime_ns, value, now)
           else:
             value = target.read_bytes()
             _virtual_cache[cache_key] = (mtime_ns, value, now)
@@ -354,6 +378,8 @@ class Params:
 
   def all_keys(self, flag=ParamKeyFlag.ALL):
     virtual_keys = [k for k, meta in VIRTUAL_PARAMS.items() if (flag == ParamKeyFlag.ALL) or bool(meta[1] & flag)]
+    if lib is None or self.p is None:
+      return _load_header_keys() + virtual_keys
     if flag == ParamKeyFlag.ALL:
       keys = []
       for i in range(params_keys_size(self.p)):

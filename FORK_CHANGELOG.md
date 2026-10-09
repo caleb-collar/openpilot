@@ -34,6 +34,11 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ### Fixed
 
+- **Panda Safety Steering Compliance**: Clamped `steer_driver_allowance` to a maximum of 100 counts (`min(100, allowance)`) in `CarControllerParams` and `ExternalController._update_torque` to strictly honor the Panda firmware compile-time safety threshold (`.driver_torque_allowance = 100` in `safety/modes/rivian.h`), preventing Panda safety faults during manual driver steering resistance in the Firm sensitivity profile.
+- **Stalk UP_2 Latching Invariant**: Added `_up1_pressed` state tracking in `CarStateExt.update_stalk_controls` to eliminate phantom release events during rapid stalk sweeps from neutral through UP_1 to UP_2, preserving UP_2 full-disengage latching in `car_specific.py` when Action 2 ("Disengage All") is selected.
+- **Virtual Parameter Cross-Process Invalidation**: Bounded in-memory virtual parameter caching in `Params.get()` to a 0.5s TTL before checking file modification times (`mtime_ns`), ensuring cross-process parameter updates between UI and control daemons without disk thrashing.
+- **Hardware Diagnostics Text Styling**: Corrected `action_item._color` to `action_item.color` on hardware diagnostic items in `brands/rivian.py`, restoring intended green/gray diagnostic status text styling.
+- **Offline / Windows Schema Tooling**: Added `_load_header_keys()` fallback in `Params.all_keys()` when `libparams_c` is unavailable, allowing offline test runners and schema validators to pass without C library dependencies.
 - Increased maximum conventional commit header length in `.githooks/commit-msg` and `CONTRIBUTING.md` from 100 to 120 characters, resolving CI `commit-lint` failures on comprehensive commit headers without rewriting git history.
 
 ### Documentation

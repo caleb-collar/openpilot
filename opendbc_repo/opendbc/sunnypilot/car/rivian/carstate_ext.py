@@ -32,6 +32,7 @@ class CarStateExt:
 
     self.vdm_user_adas_request = 0
     self._lkas_pending = False
+    self._up1_pressed = False
     self.frame = 0
     self.stalk_up1_action = 0
     self.speed_click_step = 0
@@ -70,7 +71,8 @@ class CarStateExt:
       self.steer_driver_allowance = 75
       self.steer_driver_pressed_threshold = 0.75
     elif sensitivity == 2:
-      self.steer_driver_allowance = 130
+      # Driver torque allowance cannot exceed panda safety limit (100 in rivian.h)
+      self.steer_driver_allowance = 100
       self.steer_driver_pressed_threshold = 1.30
     else:
       self.steer_driver_allowance = 100
@@ -109,14 +111,16 @@ class CarStateExt:
     if self._lkas_pending:
       if vdm != 2:
         button_events.extend(self._emit_up1_event(True))
+        self._up1_pressed = True
       self._lkas_pending = False
 
     if vdm == 1 and self.vdm_user_adas_request not in (1, 2):
       # DISENGAGE mode (value 2).
       if not (self.steering_mode_on_brake == 2 and ret.cruiseState.enabled):
         self._lkas_pending = True
-    elif vdm != 1 and self.vdm_user_adas_request == 1:
+    elif vdm != 1 and self._up1_pressed:
       button_events.extend(self._emit_up1_event(False))
+      self._up1_pressed = False
 
     self.vdm_user_adas_request = vdm
     return button_events
