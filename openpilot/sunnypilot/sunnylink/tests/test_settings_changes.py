@@ -234,15 +234,9 @@ class TestNotEngagedReplacement(OpenpilotTestCase):
 
 
 class TestGaryPilotRivianSettings(OpenpilotTestCase):
-  def test_rivian_vehicle_settings_exist(self, schema):
-    """Rivian vehicle settings must exist with expected items and widgets."""
-    rivian_sec = schema.get("vehicle_settings", {}).get("rivian")
-    assert rivian_sec is not None, "vehicle_settings.rivian section missing"
-    assert rivian_sec.get("title") == "Rivian Settings"
-    items = {item["key"]: item for item in rivian_sec.get("items", [])}
-    assert "RivianEnforceStockLongitudinal" in items
-    assert items["RivianEnforceStockLongitudinal"]["widget"] == "toggle"
-    assert items["RivianEnforceStockLongitudinal"]["needs_onroad_cycle"] is True
+  def test_no_redundant_rivian_vehicle_settings(self, schema):
+    """Rivian must not expose redundant opt-out toggles under vehicle settings (handled via Developer Alpha Long)."""
+    assert "RivianEnforceStockLongitudinal" not in [item.get("key") for item in _walk_items(schema)]
 
   def test_alpha_longitudinal_warning_mentions_rivian(self, schema):
     """AlphaLongitudinalEnabled description must accurately reflect Rivian XNOR XTREME AEB retention."""

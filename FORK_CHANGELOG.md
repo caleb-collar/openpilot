@@ -16,14 +16,13 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ### Added
 
-- Dedicated **Rivian Settings** menu in sunnylink and on-device Raylib UI:
-  - Added `- id: rivian` section in `pages/vehicle.yaml` and recompiled canonical `settings_ui.json`, providing a dedicated brand configuration card for Rivian R1 vehicles on the public sunnylink web portal.
-  - Implemented `RivianSettings` layout in `openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/rivian.py` for full on-device screen parity.
-  - Added **Enforce Factory Longitudinal Control** (`RivianEnforceStockLongitudinal`, default: Off): enables drivers to seamlessly fallback to native Rivian ACC radar/speed control while preserving continuous sunnypilot MADS steering assist (architecturally aligned with Toyota's stock longitudinal enforcement).
-  - Added `VIRTUAL_PARAMS` support in `openpilot/common/params.py` with thread-safe in-memory caching and atomic file writes (`NamedTemporaryFile` + `os.replace`), eliminating file-tearing and disk stalls in real-time loops while keeping `params_keys.h` byte-identical to maintain prebuilt-branch invariants (plan D4).
+- Added `VIRTUAL_PARAMS` infrastructure in `openpilot/common/params.py` with `.virtual/` subdirectory persistence, thread-safe in-memory caching, and atomic file writes (`NamedTemporaryFile` + `os.replace`), eliminating file-tearing, disk stalls, and C++ `clearAll` directory-scrubbing while preserving prebuilt-branch invariants.
 
 ### Changed
 
+- Streamlined longitudinal control UX and eliminated redundant/confusing vehicle settings:
+  - Removed redundant `RivianEnforceStockLongitudinal` toggle and empty card from the Vehicle settings schema (`pages/vehicle.yaml` and `settings_ui.json`), bringing Rivian into alignment with other mainstream brands (Ford, Honda, GM).
+  - Established a single, intuitive source of truth under **Developer > sunnypilot Longitudinal Control (Alpha)**: defaults to OFF (factory Rivian ACC active); opt-in toggles openpilot longitudinal control with direct Bosch ESP AEB safety disengagement.
 - Updated sunnylink and on-device UI warnings for **Alpha Longitudinal Control**:
   - Replaced the inaccurate blanket warning ("will disable Automatic Emergency Braking (AEB)") in `developer.yaml`, `settings_ui.json`, and `developer.py`.
   - Clarified that on vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct Bosch ESP intervention.
@@ -38,11 +37,6 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
   - Relocated virtual parameter persistence to a dedicated `.virtual/` subdirectory within the parameters directory. Because C++ `Params::clearAll` skips directory entries (`de->d_type == DT_DIR`), virtual parameters are protected from being unlinked during manager startup (`CLEAR_ON_MANAGER_START`) or onroad/offroad drive transitions.
   - Added seamless automatic migration from legacy root parameter paths into `.virtual/`.
   - Scoped cache keys to the canonical parameter path (`self.get_param_path()`) and implemented 100 ms polling for `block=True` virtual parameter reads.
-- Fixed UI dialog crashes in on-device Rivian settings:
-  - Replaced non-existent `gui_app.show_dialog` with `gui_app.push_widget(dlg)` and instantiated `ConfirmDialog` with `rich=True` and keyword `callback=` to avoid callback misinterpretation.
-- Fixed bitwise filtering in `all_keys` to ensure virtual parameters with `ParamKeyFlag.BACKUP` are discovered by Sunnylink cloud backup RPCs.
-- Hardened `_initialize_rivian` in `interfaces.py` against `None` values in car interface params dictionaries.
-- Expanded Sunnylink device telemetry in `capabilities.py` to accurately report `stock_longitudinal` for Rivian vehicles.
 
 ## [0.2.1] - 2026-10-08
 

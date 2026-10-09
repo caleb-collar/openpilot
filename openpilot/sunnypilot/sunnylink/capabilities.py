@@ -129,10 +129,8 @@ def generate_capabilities(params: Params | None = None) -> dict:
   caps["device_type"] = HARDWARE.get_device_type()
   caps["is_release"] = False  # params.get_bool("IsReleaseBranch")
   caps["is_sp_release"] = params.get_bool("IsReleaseSpBranch")
-  caps["stock_longitudinal"] = (
-    params.get_bool("ToyotaEnforceStockLongitudinal") or
-    params.get_bool("RivianEnforceStockLongitudinal")
-  )
+  caps["is_development"] = params.get_bool("IsDevelopmentBranch")
+  caps["stock_longitudinal"] = params.get_bool("ToyotaEnforceStockLongitudinal")
 
   bundle = params.get("CarPlatformBundle")
   bundle_brand = _bundle_field(bundle, "brand")

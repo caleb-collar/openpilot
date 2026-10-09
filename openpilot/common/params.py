@@ -36,9 +36,7 @@ class ParamKeyType(IntEnum):
 
 # Virtual parameters supported for fork-specific platforms (e.g. Rivian R1 on GaryPilot)
 # without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
-VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
-  b"RivianEnforceStockLongitudinal": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
-}
+VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {}
 
 # In-memory virtual param cache mapping (param_path, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
 _virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}

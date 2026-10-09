@@ -132,11 +132,6 @@ def initialize_params(params) -> list[dict[str, Any]]:
     "TeslaMadsScreenButton",
   ])
 
-  # rivian
-  keys.extend([
-    "RivianEnforceStockLongitudinal",
-  ])
-
   # toyota
   keys.extend([
     "ToyotaEnforceStockLongitudinal",

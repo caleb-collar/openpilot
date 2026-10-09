@@ -27,17 +27,6 @@ sections:
     enablement:
     - $ref: '#/macros/offroad'
     - $ref: '#/macros/longitudinal'
-- id: rivian
-  title: Rivian Settings
-  description: 'Custom vehicle dynamics and safety integration for Rivian R1 vehicles on GaryPilot.'
-  items:
-  - key: RivianEnforceStockLongitudinal
-    widget: toggle
-    needs_onroad_cycle: true
-    title: Enforce Factory Longitudinal Control
-    description: 'sunnypilot will not take over gas and brakes. Factory Rivian ACC longitudinal control will be used while retaining MADS steering assist.'
-    enablement:
-    - $ref: '#/macros/not_engaged'
 - id: subaru
   title: Subaru Settings
   description: ''
