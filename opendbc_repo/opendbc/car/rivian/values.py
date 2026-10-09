@@ -145,7 +145,7 @@ class CarControllerParams:
     500,  # deg, STEER_ANGLE_MAX
     MAX_LATERAL_ACCEL=ISO_LATERAL_ACCEL + (ACCELERATION_DUE_TO_GRAVITY * AVERAGE_ROAD_ROLL),  # ~3.6 m/s^2
     MAX_LATERAL_JERK=3.0 + (ACCELERATION_DUE_TO_GRAVITY * AVERAGE_ROAD_ROLL),  # ~3.6 m/s^3
-    MAX_ANGLE_RATE=2.5,  # deg/10ms frame
+    MAX_ANGLE_RATE=3.5,  # deg/10ms frame (~350 deg/s at low speed; highway rate strictly bounded by lateral jerk VM to ~10 deg/s)
   )
 
   ACCEL_MIN = -3.5  # m/s^2

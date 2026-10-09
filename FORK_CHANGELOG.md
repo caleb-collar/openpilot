@@ -23,9 +23,12 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
     - `RivianSteerOverrideSensitivity`: Configurable driver steering resistance profile (*Light*: 75 torque allowance / 0.75 Nm threshold; *Standard*: 100 torque allowance / 1.00 Nm threshold; *Firm*: 130 torque allowance / 1.30 Nm threshold), allowing drivers to customize how easily openpilot yields to manual steering intervention.
   - Implemented across on-device Raylib UI (`brands/rivian.py`) and Sunnylink schema (`pages/vehicle.yaml` / `settings_ui.json`) with safe non-engaged gating.
   - Strictly excluded longitudinal control from the Vehicle tab (Option 4 excluded; longitudinal control toggle resides exclusively in the primary **Toggles** tab).
+- **Speed-Dependent Low-Speed Steering Authority**:
+  - Implemented speed-dependent torque-to-angle handoff threshold `HANDOFF_MAX_ANGLE_BP = [0.0, 5.56, 12.50]` m/s with `HANDOFF_MAX_ANGLE_V = [60.0, 45.0, 25.0]` deg in `ExternalController._update_torque_active`. Expands the torque-to-angle handoff envelope from 25° up to 60° at low speeds (0–12.4 mph / 0–20 km/h) for tight 90° intersections, roundabouts, and parking lot maneuvers, while smoothly tapering down to 25° above 28 mph and remaining strictly bounded by the ISO lateral acceleration envelope (`iso_max`, ~16.7° at 65 mph) on highways.
 
 ### Changed
 
+- Increased `CarControllerParams.ANGLE_LIMITS.MAX_ANGLE_RATE` from 2.5 to 3.5 deg/frame (~350 deg/s at low speeds) in `values.py`, providing agile wheel rotation for sharp low-speed maneuvers while having zero impact at highway speeds where `get_max_angle_delta_vm()` strictly bounds angle changes to ~16 deg/s (~0.16 deg/frame) via lateral jerk constraints.
 - Relocated longitudinal control from Developer "(Alpha)" into the primary on-device and Sunnylink **Toggles** menu:
   - Added **GaryPilot Longitudinal Control** to `openpilot/selfdrive/ui/layouts/settings/toggles.py` and `settings_ui_src/pages/toggles.yaml` with safety confirmation dialog.
   - Retained default disabled state (`AlphaLongitudinalEnabled = "0"` / `false`), ensuring factory Rivian ACC is active unless explicitly enabled by the driver.

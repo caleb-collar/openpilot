@@ -509,6 +509,40 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
       # Next get() must detect disk modification and return new value
       assert params.get("RivianStalkUp1Action") == 2
 
+  def test_rivian_low_speed_turn_limits_and_high_speed_safety(self):
+    """Verify low-speed handoff and rate limits are enhanced while high-speed safety remains strictly preserved."""
+    import numpy as np
+    from opendbc.car.rivian.values import CarControllerParams as CCP
+    from opendbc.car.rivian.ext_controller import (
+      HANDOFF_MAX_ANGLE_BP, HANDOFF_MAX_ANGLE_V, get_safety_CP
+    )
+    from opendbc.car.lateral import get_max_angle_delta_vm, get_max_angle_vm
+    from opendbc.car.vehicle_model import VehicleModel
+
+    vm = VehicleModel(get_safety_CP())
+
+    # 1. Handoff angle is raised to 60 deg at low speeds (0 m/s) and tapers to 25 deg at 12.5 m/s (~28 mph)
+    handoff_0 = float(np.interp(0.0, HANDOFF_MAX_ANGLE_BP, HANDOFF_MAX_ANGLE_V))
+    handoff_low = float(np.interp(5.56, HANDOFF_MAX_ANGLE_BP, HANDOFF_MAX_ANGLE_V))
+    handoff_high = float(np.interp(20.0, HANDOFF_MAX_ANGLE_BP, HANDOFF_MAX_ANGLE_V))
+    assert handoff_0 == 60.0
+    assert handoff_low == 45.0
+    assert handoff_high == 25.0
+
+    # 2. Highway speed handoff is strictly clamped by ISO lateral acceleration (iso_max)
+    # At 29 m/s (~65 mph), iso_max restricts steering angle to ~16.7 deg regardless of handoff threshold
+    iso_max_highway = get_max_angle_vm(29.0, vm, CCP)
+    assert 15.0 < iso_max_highway < 18.0
+
+    # 3. Rate limits: MAX_ANGLE_RATE is 3.5 deg/frame (350 deg/s) for low-speed agility
+    assert CCP.ANGLE_LIMITS.MAX_ANGLE_RATE == 3.5
+
+    # 4. At highway speeds (30 m/s / ~67 mph), get_max_angle_delta_vm strictly bounds per-frame delta
+    # to ~0.16 deg/frame (~16 deg/s), mathematically preventing sudden turns at high speeds
+    highway_delta = get_max_angle_delta_vm(30.0, vm, CCP)
+    assert highway_delta < 0.20
+    assert min(highway_delta, CCP.ANGLE_LIMITS.MAX_ANGLE_RATE) == highway_delta
+
 
 
   def test_longitudinal_control_in_toggles_not_developer(self, schema):

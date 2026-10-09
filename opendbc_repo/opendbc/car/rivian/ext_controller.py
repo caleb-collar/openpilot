@@ -26,7 +26,12 @@ PANDA_STEP_MARGIN = 0.9
 MIN_TORQUE_FRAMES = 50
 HANDOFF_EXIT_DEG = 15.0       # hand back to angle when the wheel is within this of the commanded angle
 UNWIND_HANDOFF_RATE = 40.0    # max wheel speed in deg/s to hand back to angle
-HANDOFF_MAX_ANGLE_DEG = 25.0  # no handoff to angle mid-turn
+# Speed-dependent max wheel angle for torque-to-angle handoff.
+# Allows up to 60 deg at low speeds (sharp turns, intersections, roundabouts) while
+# transitioning to 25 deg at medium/high speeds (and further capped by iso_max on highway).
+HANDOFF_MAX_ANGLE_BP = [0.0, 5.56, 12.50]   # m/s (0, 12.4 mph, 28 mph)
+HANDOFF_MAX_ANGLE_V  = [60.0, 45.0, 25.0]   # deg
+HANDOFF_MAX_ANGLE_DEG = 25.0  # nominal highway threshold
 
 # light-torsion presence, bridges capacitive dropouts while hands slide on the wheel
 PRESENCE_TORQUE_THRESHOLD = 1.5
@@ -182,7 +187,8 @@ class ExternalController:
       fw_max = float(np.interp(CS.out.vEgoRaw, EPAS_FW_MAX_ANGLE_BP, EPAS_FW_MAX_ANGLE_V)) * EPAS_FW_ANGLE_MARGIN
       # no handoff to an angle the ISO lat-accel envelope won't let us command, panda would block it
       iso_max = get_max_angle_vm(max(CS.out.vEgoRaw, 1.0), self.VM_safety, CCP)
-      in_envelope = abs(CS.out.steeringAngleDeg) < min(fw_max, HANDOFF_MAX_ANGLE_DEG, iso_max)
+      handoff_max = float(np.interp(CS.out.vEgoRaw, HANDOFF_MAX_ANGLE_BP, HANDOFF_MAX_ANGLE_V))
+      in_envelope = abs(CS.out.steeringAngleDeg) < min(fw_max, handoff_max, iso_max)
       # only once the wheel motion fits the EPAS rate budget
       thr_dps = float(np.interp(CS.out.vEgoRaw, EPAS_FW_RATE_BP, EPAS_FW_RATE_V)) * 100.0
       lo, hi = self.rate_budget.bounds(thr_dps, EPAS_FW_RATE_MARGIN)
