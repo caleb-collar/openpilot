@@ -2317,6 +2317,89 @@
           ]
         }
       ]
+    },
+    "rivian": {
+      "title": "Rivian Settings",
+      "description": "",
+      "items": [
+        {
+          "key": "RivianHarnessStatus",
+          "widget": "info",
+          "title": "Hardware & Harness Diagnostics",
+          "description": "Live status of Rivian lateral and longitudinal CAN harnesses, radar forwarding, and platform generation."
+        },
+        {
+          "key": "RivianStalkUp1Action",
+          "widget": "multiple_button",
+          "title": "Stalk UP_1 Tap Action",
+          "description": "Configure the action when flicking the gear stalk up to UP_1: toggle MADS lateral steering, cancel factory ACC/longitudinal, or disengage both.",
+          "options": [
+            {
+              "value": 0,
+              "label": "MADS Toggle"
+            },
+            {
+              "value": 1,
+              "label": "Cancel ACC"
+            },
+            {
+              "value": 2,
+              "label": "Disengage All"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "not_engaged"
+            }
+          ]
+        },
+        {
+          "key": "RivianSpeedClickStep",
+          "widget": "multiple_button",
+          "title": "Thumbpad Speed Click Step",
+          "description": "Configure the set speed increment when clicking the right steering wheel thumbpad left/right.",
+          "options": [
+            {
+              "value": 0,
+              "label": "1 mph / km/h"
+            },
+            {
+              "value": 1,
+              "label": "5 mph / km/h"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "not_engaged"
+            }
+          ]
+        },
+        {
+          "key": "RivianSteerOverrideSensitivity",
+          "widget": "multiple_button",
+          "title": "Driver Override Sensitivity",
+          "description": "Adjust steering resistance threshold before openpilot yields to driver intervention. Light allows effortless steering override; Firm holds the lane more rigidly against minor steering touches.",
+          "options": [
+            {
+              "value": 0,
+              "label": "Light"
+            },
+            {
+              "value": 1,
+              "label": "Standard"
+            },
+            {
+              "value": 2,
+              "label": "Firm"
+            }
+          ],
+          "enablement": [
+            {
+              "type": "not_engaged"
+            }
+          ]
+        }
+      ]
     }
   }
 }

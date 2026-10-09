@@ -12,6 +12,18 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+### Added
+
+- Added **Hardware Detection & Harness Diagnostic Card** and **Vehicle Controls Customization** to the **Vehicle -> Rivian** settings tab:
+  - **Hardware & Harness Diagnostics**: Live diagnostic readout in on-device UI and Sunnylink displaying connection status for Lateral Angle Harness (`0x1310`), Longitudinal Harness Upgrade / XNOR XTREME (`0x131a`), Platform Generation (Gen 1 vs. Gen 2), Front Millimeter-Wave Radar (32 object tracks), and Corner Radar Blind-Spot Monitoring (BSM). Emits live summary telemetry via `RivianHarnessStatus`.
+  - **Stalk & Thumbpad Customization**:
+    - `RivianStalkUp1Action`: Configurable gear stalk UP_1 tap behavior allowing drivers to choose between *MADS Toggle* (default), *Cancel ACC* (matches factory Rivian behavior), or *Disengage All* (simultaneous lateral and longitudinal disengagement).
+    - `RivianSpeedClickStep`: Configurable right steering wheel thumbpad click set-speed increment ($\pm 1\text{ mph / km/h}$ vs. $\pm 5\text{ mph / km/h}$).
+  - **Driver Override Sensitivity Tuning**:
+    - `RivianSteerOverrideSensitivity`: Configurable driver steering resistance profile (*Light*: 75 torque allowance / 0.75 Nm threshold; *Standard*: 100 torque allowance / 1.00 Nm threshold; *Firm*: 130 torque allowance / 1.30 Nm threshold), allowing drivers to customize how easily openpilot yields to manual steering intervention.
+  - Implemented across on-device Raylib UI (`brands/rivian.py`) and Sunnylink schema (`pages/vehicle.yaml` / `settings_ui.json`) with safe non-engaged gating.
+  - Strictly excluded longitudinal control from the Vehicle tab (Option 4 excluded; longitudinal control toggle resides exclusively in the primary **Toggles** tab).
+
 ### Changed
 
 - Relocated longitudinal control from Developer "(Alpha)" into the primary on-device and Sunnylink **Toggles** menu:

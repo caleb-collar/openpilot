@@ -234,10 +234,174 @@ class TestNotEngagedReplacement(OpenpilotTestCase):
 
 
 class TestGaryPilotRivianSettings(OpenpilotTestCase):
-  def test_no_redundant_rivian_vehicle_settings(self, schema):
-    """Rivian must not expose redundant opt-out toggles or empty cards under vehicle settings (handled via Toggles panel)."""
+  def test_rivian_vehicle_settings_and_no_redundant_longitudinal(self, schema):
+    """Rivian vehicle settings must contain diagnostics and controls customization, but NOT redundant longitudinal toggles."""
     assert "RivianEnforceStockLongitudinal" not in [item.get("key") for item in _walk_items(schema)]
-    assert "rivian" not in schema.get("vehicle_settings", {})
+    assert "rivian" in schema.get("vehicle_settings", {})
+    rivian_items = schema["vehicle_settings"]["rivian"]["items"]
+    rivian_keys = [item.get("key") for item in rivian_items]
+    assert "RivianHarnessStatus" in rivian_keys
+    assert "RivianStalkUp1Action" in rivian_keys
+    assert "RivianSpeedClickStep" in rivian_keys
+    assert "RivianSteerOverrideSensitivity" in rivian_keys
+    # Option 4 exclusion: longitudinal control toggle must NOT be duplicated under vehicle settings
+    assert "AlphaLongitudinalEnabled" not in rivian_keys
+
+  def test_rivian_stalk_up1_action_decoding(self):
+    """Verify CarStateExt decodes UP_1 according to RivianStalkUp1Action (0=lkas, 1=cancel, 2=disengage all)."""
+    from types import SimpleNamespace
+    from opendbc.car import Bus, structs
+    from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+    ButtonType = structs.CarState.ButtonEvent.Type
+
+    CP = structs.CarParams.new_message()
+    CP.brand = 'rivian'
+    CP_SP = structs.CarParamsSP()
+
+    class FakeParams:
+      def __init__(self, action):
+        self.action = str(action)
+      def get(self, key, block=False, return_default=False):
+        if key == "RivianStalkUp1Action":
+          return self.action
+        return None
+      def get_bool(self, key, block=False):
+        return False
+
+    # Action 0: MADS Toggle -> ButtonType.lkas
+    ext0 = CarStateExt(CP, CP_SP)
+    ext0.params = FakeParams(0)
+    ext0._refresh_params()
+    ret = structs.CarState()
+    cp = SimpleNamespace(vl={"VDM_AdasSts": {"VDM_UserAdasRequest": 1}})
+    ext0.update_stalk_controls(ret, {Bus.pt: cp})
+    evs = ext0.update_stalk_controls(ret, {Bus.pt: cp})
+    assert any(be.type == ButtonType.lkas and be.pressed for be in evs)
+
+    # Action 1: Cancel ACC -> ButtonType.cancel
+    ext1 = CarStateExt(CP, CP_SP)
+    ext1.params = FakeParams(1)
+    ext1._refresh_params()
+    ext1.update_stalk_controls(ret, {Bus.pt: cp})
+    evs = ext1.update_stalk_controls(ret, {Bus.pt: cp})
+    assert any(be.type == ButtonType.cancel and be.pressed for be in evs)
+    assert not any(be.type == ButtonType.lkas for be in evs)
+
+    # Action 2: Disengage All -> ButtonType.cancel + ButtonType.altButton2
+    ext2 = CarStateExt(CP, CP_SP)
+    ext2.params = FakeParams(2)
+    ext2._refresh_params()
+    ext2.update_stalk_controls(ret, {Bus.pt: cp})
+    evs = ext2.update_stalk_controls(ret, {Bus.pt: cp})
+    assert any(be.type == ButtonType.cancel and be.pressed for be in evs)
+    assert any(be.type == ButtonType.altButton2 and be.pressed for be in evs)
+
+  def test_rivian_speed_click_step_delta(self):
+    """Verify CarStateExt applies 1 mph vs 5 mph click delta based on RivianSpeedClickStep."""
+    from types import SimpleNamespace
+    from opendbc.car import Bus, structs
+    from opendbc.car.common.conversions import Conversions as CV
+    from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+    from opendbc.sunnypilot.car.rivian.values import RivianFlagsSP
+
+    CP = structs.CarParams.new_message()
+    CP.brand = 'rivian'
+    CP.openpilotLongitudinalControl = True
+    CP_SP = structs.CarParamsSP()
+    CP_SP.flags |= RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE
+
+    class FakeParams:
+      def __init__(self, step):
+        self.step = str(step)
+      def get(self, key, block=False, return_default=False):
+        if key == "RivianSpeedClickStep":
+          return self.step
+        return None
+      def get_bool(self, key, block=False):
+        return False
+
+    # Step 0 (1 mph step)
+    ext0 = CarStateExt(CP, CP_SP)
+    ext0.params = FakeParams(0)
+    ext0._refresh_params()
+    ext0.set_speed = 30.0 * CV.MPH_TO_MS
+
+    ret = structs.CarState()
+    ret.cruiseState.enabled = True
+    ret.vEgoCluster = 30.0 * CV.MPH_TO_MS
+    cp_park = SimpleNamespace(vl={"WheelButtons_Fwd": {"RightButton_Scroll": 255, "RightButton_RightClick": 2, "RightButton_LeftClick": 0}})
+    cp_adas = SimpleNamespace(vl={"Cluster": {"Cluster_Unit": 1}}) # MPH
+    cp_pt = SimpleNamespace(vl={"VDM_AdasSts": {"VDM_UserAdasRequest": 0}})
+
+    ext0.update_longitudinal_upgrade(ret, {Bus.alt: cp_park, Bus.adas: cp_adas, Bus.pt: cp_pt})
+    assert abs(ext0.set_speed - (31.0 * CV.MPH_TO_MS)) < 1e-4
+
+    # Step 1 (5 mph step)
+    ext1 = CarStateExt(CP, CP_SP)
+    ext1.params = FakeParams(1)
+    ext1._refresh_params()
+    ext1.set_speed = 30.0 * CV.MPH_TO_MS
+    ext1.update_longitudinal_upgrade(ret, {Bus.alt: cp_park, Bus.adas: cp_adas, Bus.pt: cp_pt})
+    assert abs(ext1.set_speed - (35.0 * CV.MPH_TO_MS)) < 1e-4
+
+  def test_rivian_driver_override_sensitivity(self):
+    """Verify steering allowance and pressed threshold match RivianSteerOverrideSensitivity."""
+    from opendbc.car import structs
+    from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+    from opendbc.car.rivian.values import CarControllerParams
+    from opendbc.car.rivian.ext_controller import ExternalController
+
+    CP = structs.CarParams.new_message()
+    CP.brand = 'rivian'
+    CP_SP = structs.CarParamsSP()
+
+    class FakeParams:
+      def __init__(self, sens):
+        self.sens = str(sens)
+      def get(self, key, block=False, return_default=False):
+        if key == "RivianSteerOverrideSensitivity":
+          return self.sens
+        return None
+      def get_bool(self, key, block=False):
+        return False
+
+    # Light (0)
+    ext_light = CarStateExt(CP, CP_SP)
+    ext_light.params = FakeParams(0)
+    ext_light._refresh_params()
+    assert ext_light.steer_driver_allowance == 75
+    assert ext_light.steer_driver_pressed_threshold == 0.75
+
+    # Standard (1)
+    ext_std = CarStateExt(CP, CP_SP)
+    ext_std.params = FakeParams(1)
+    ext_std._refresh_params()
+    assert ext_std.steer_driver_allowance == 100
+    assert ext_std.steer_driver_pressed_threshold == 1.00
+
+    # Firm (2)
+    ext_firm = CarStateExt(CP, CP_SP)
+    ext_firm.params = FakeParams(2)
+    ext_firm._refresh_params()
+    assert ext_firm.steer_driver_allowance == 130
+    assert ext_firm.steer_driver_pressed_threshold == 1.30
+
+    # Verify ExternalController uses CS.steer_driver_allowance
+    class MockCS:
+      def __init__(self):
+        self.out = structs.CarState()
+        self.out.vEgoRaw = 20.0
+        self.out.steeringTorque = 50.0
+        self.steer_driver_allowance = 75
+
+    erc = ExternalController()
+    cs_mock = MockCS()
+    erc.torque_active = True
+    actuators = structs.CarControl.Actuators()
+    actuators.torque = 0.5
+    erc._update_torque(cs_mock, actuators)
+    assert erc.ccp.STEER_DRIVER_ALLOWANCE == 75
+
 
   def test_longitudinal_control_in_toggles_not_developer(self, schema):
     """GaryPilot longitudinal control must reside in Toggles panel, not Developer."""

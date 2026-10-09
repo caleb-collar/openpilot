@@ -66,6 +66,7 @@ def get_safety_CP():
 class ExternalController:
   def __init__(self):
     self.VM_safety = VehicleModel(get_safety_CP())
+    self.ccp = CCP()
 
     # hands-on
     self.wheel_touch_cnt = 0
@@ -234,8 +235,12 @@ class ExternalController:
     v_ego = CS.out.vEgoRaw
     steer_max = round(float(np.interp(v_ego, CCP.STEER_MAX_LOOKUP[0], CCP.STEER_MAX_LOOKUP[1])))
     new_torque = int(round(float(actuators.torque) * steer_max))
+    limits = CCP
+    if hasattr(CS, "steer_driver_allowance"):
+      limits = self.ccp
+      self.ccp.STEER_DRIVER_ALLOWANCE = CS.steer_driver_allowance
     apply_torque = apply_driver_steer_torque_limits(new_torque, self.apply_torque_last,
-                                                    CS.out.steeringTorque, CCP, steer_max)
+                                                    CS.out.steeringTorque, limits, steer_max)
 
     # blip the TOI request when held at high angle, torque drops to 0 so the rate limiter ramps back from 0
     self.toi_angle_limit_counter, toi_act = common_fault_avoidance(

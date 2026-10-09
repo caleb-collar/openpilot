@@ -151,8 +151,14 @@ class CarControllerParams:
   ACCEL_MIN = -3.5  # m/s^2
   ACCEL_MAX = 2.0  # m/s^2
 
-  def __init__(self, CP):
-    pass
+  def __init__(self, CP=None, sensitivity=1):
+    self.sensitivity = sensitivity
+    if sensitivity == 0:
+      self.STEER_DRIVER_ALLOWANCE = 75
+    elif sensitivity == 2:
+      self.STEER_DRIVER_ALLOWANCE = 130
+    else:
+      self.STEER_DRIVER_ALLOWANCE = 100
 
 
 DBC = CAR.create_dbc_map()

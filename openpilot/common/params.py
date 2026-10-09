@@ -36,14 +36,22 @@ class ParamKeyType(IntEnum):
 
 # Virtual parameters supported for fork-specific platforms (e.g. Rivian R1 on GaryPilot)
 # without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
-VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {}
+VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
+  b"RivianHarnessStatus": (ParamKeyType.STRING, ParamKeyFlag.PERSISTENT, b"Standby"),
+  b"RivianStalkUp1Action": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"0"),
+  b"RivianSpeedClickStep": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"0"),
+  b"RivianSteerOverrideSensitivity": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"1"),
+}
 
 # In-memory virtual param cache mapping (param_path, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
 _virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}
 
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
-lib = ctypes.CDLL(Path(__file__).with_name(f"libparams_c{_suffix}"))
+try:
+  lib = ctypes.CDLL(Path(__file__).with_name(f"libparams_c{_suffix}"))
+except OSError:
+  lib = None
 
 ParamsHandle = ctypes.c_void_p
 
@@ -53,6 +61,8 @@ class ParamsBuffer(ctypes.Structure):
 
 
 def _bind_raw(name, args, result=None):
+  if lib is None:
+    return lambda *a, **k: None
   function = getattr(lib, name)
   function.argtypes = args
   function.restype = result
@@ -116,7 +126,7 @@ def ensure_bytes(v):
 
 
 def _copy_string(value):
-  if value.data is None:
+  if value is None or getattr(value, "data", None) is None:
     return None
   return ctypes.string_at(value.data, value.size)
 
@@ -163,6 +173,8 @@ class Params:
     key = ensure_bytes(key)
     if key in VIRTUAL_PARAMS:
       return key
+    if lib is None:
+      return key
     if b"\0" in key or not params_check_key(self.p, key):
       raise UnknownKeyName(key)
     return key
@@ -186,6 +198,8 @@ class Params:
     k = self.check_key(key)
     if k in VIRTUAL_PARAMS:
       return VIRTUAL_PARAMS[k][2]
+    if lib is None:
+      return None
     return _copy_string(params_get_default(self.p, key))
 
   def get(self, key, block=False, return_default=False):
@@ -235,7 +249,14 @@ class Params:
       if value == b"":
         return self._cpp2python(t, default, None, key)
       return self._cpp2python(t, value, default, key)
-    value = _copy_string(params_get(self.p, k, block))
+    if lib is None:
+      p = Path(self.get_param_path()) / k.decode()
+      try:
+        value = p.read_bytes()
+      except Exception:
+        value = default
+    else:
+      value = _copy_string(params_get(self.p, k, block))
     if value == b"":
       if block:
         raise KeyboardInterrupt
@@ -318,12 +339,17 @@ class Params:
 
   def get_param_path(self, key=""):
     key = ensure_bytes(key)
-    return _copy_string(params_get_path(self.p, key, len(key))).decode()
+    res = _copy_string(params_get_path(self.p, key, len(key)))
+    if not res:
+      return os.environ.get("PARAMS_PATH", "/data/params/d")
+    return res.decode()
 
   def get_type(self, key):
     k = self.check_key(key)
     if k in VIRTUAL_PARAMS:
       return VIRTUAL_PARAMS[k][0]
+    if lib is None:
+      return ParamKeyType.STRING
     return ParamKeyType(params_get_key_type(self.p, self.check_key(key)))
 
   def all_keys(self, flag=ParamKeyFlag.ALL):

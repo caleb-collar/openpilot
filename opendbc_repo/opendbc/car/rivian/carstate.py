@@ -48,7 +48,8 @@ class CarState(CarStateBase, CarStateExt):
     ret.steeringAngleDeg = cp.vl["EPAS_AdasStatus"]["EPAS_InternalSas"]
     ret.steeringRateDeg = cp.vl["EPAS_AdasStatus"]["EPAS_SteeringAngleSpeed"]
     ret.steeringTorque = cp.vl["EPAS_SystemStatus"]["EPAS_TorsionBarTorque"]
-    ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > 1.0, 5)
+    threshold = getattr(self, "steer_driver_pressed_threshold", 1.0)
+    ret.steeringPressed = self.update_steering_pressed(abs(ret.steeringTorque) > threshold, 5)
 
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 

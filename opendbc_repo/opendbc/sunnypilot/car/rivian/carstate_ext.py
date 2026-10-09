@@ -32,6 +32,11 @@ class CarStateExt:
 
     self.vdm_user_adas_request = 0
     self._lkas_pending = False
+    self.frame = 0
+    self.stalk_up1_action = 0
+    self.speed_click_step = 0
+    self.steer_driver_allowance = 100
+    self.steer_driver_pressed_threshold = 1.0
 
     # lazy openpilot imports: opendbc must stay importable standalone (safety test suite)
     from openpilot.common.params import Params
@@ -41,6 +46,49 @@ class CarStateExt:
     # stock MadsSteeringMode default, REMAIN_ACTIVE, so lateral steers through braking in turns. Pushing the stalk to
     # UP_2 is the reliable full disengage. Never write this param here: the user's choice in settings always wins.
     self.steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, self.params)
+    self._refresh_params()
+
+  def _refresh_params(self):
+    if self.params is None:
+      return
+    try:
+      self.stalk_up1_action = int(self.params.get("RivianStalkUp1Action") or "0")
+    except Exception:
+      self.stalk_up1_action = 0
+
+    try:
+      self.speed_click_step = int(self.params.get("RivianSpeedClickStep") or "0")
+    except Exception:
+      self.speed_click_step = 0
+
+    try:
+      sensitivity = int(self.params.get("RivianSteerOverrideSensitivity") or "1")
+    except Exception:
+      sensitivity = 1
+
+    if sensitivity == 0:
+      self.steer_driver_allowance = 75
+      self.steer_driver_pressed_threshold = 0.75
+    elif sensitivity == 2:
+      self.steer_driver_allowance = 130
+      self.steer_driver_pressed_threshold = 1.30
+    else:
+      self.steer_driver_allowance = 100
+      self.steer_driver_pressed_threshold = 1.00
+
+  def _emit_up1_event(self, pressed: bool) -> list:
+    events = []
+    if self.stalk_up1_action == 1:
+      # Cancel ACC / longitudinal
+      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.cancel))
+    elif self.stalk_up1_action == 2:
+      # Disengage All (both lateral and longitudinal)
+      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.cancel))
+      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.altButton2))
+    else:
+      # MADS Toggle (Default)
+      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.lkas))
+    return events
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp = can_parsers[Bus.pt]
@@ -56,11 +104,11 @@ class CarStateExt:
     elif vdm != 2 and self.vdm_user_adas_request == 2:
       button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.altButton2))
 
-    # Signal UP_1 state via lkas button to toggle MADS
+    # Signal UP_1 state via configured action (lkas / cancel / disengage all)
     # 1-frame lookahead to prevent UP_1 flashing during sweep to UP_2
     if self._lkas_pending:
       if vdm != 2:
-        button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.lkas))
+        button_events.extend(self._emit_up1_event(True))
       self._lkas_pending = False
 
     if vdm == 1 and self.vdm_user_adas_request not in (1, 2):
@@ -68,7 +116,7 @@ class CarStateExt:
       if not (self.steering_mode_on_brake == 2 and ret.cruiseState.enabled):
         self._lkas_pending = True
     elif vdm != 1 and self.vdm_user_adas_request == 1:
-      button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.lkas))
+      button_events.extend(self._emit_up1_event(False))
 
     self.vdm_user_adas_request = vdm
     return button_events
@@ -101,19 +149,20 @@ class CarStateExt:
       metric = cp_adas.vl["Cluster"]["Cluster_Unit"] == 0
       conversion = CV.KPH_TO_MS if metric else CV.MPH_TO_MS
       long_press_step = 10.0 if metric else 5.0
+      short_press_delta = (5.0 if self.speed_click_step == 1 else 1.0) * conversion
       set_speed_converted = self.set_speed * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH)
 
       if self.increase_button:
         if self.increase_counter % 66 == 0:
           self.set_speed = (int(math.ceil((set_speed_converted + 1) / long_press_step)) * long_press_step) * conversion
         elif not prev_increase_button:
-          self.set_speed += conversion
+          self.set_speed += short_press_delta
 
       if self.decrease_button:
         if self.decrease_counter % 66 == 0:
           self.set_speed = (int(math.floor((set_speed_converted - 1) / long_press_step)) * long_press_step) * conversion
         elif not prev_decrease_button:
-          self.set_speed -= conversion
+          self.set_speed -= short_press_delta
 
       if not ret.cruiseState.enabled:
         self.set_speed = ret.vEgoCluster
@@ -134,6 +183,10 @@ class CarStateExt:
     return button_events
 
   def update(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> None:
+    self.frame += 1
+    if self.frame % 100 == 0:
+      self._refresh_params()
+
     button_events = []
     if self.CP_SP.flags & RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE:
       button_events.extend(self.update_longitudinal_upgrade(ret, can_parsers))
