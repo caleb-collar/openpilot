@@ -135,30 +135,20 @@
                         {
                           "type": "not",
                           "condition": {
-                            "type": "any",
+                            "type": "all",
                             "conditions": [
                               {
                                 "type": "capability",
                                 "field": "brand",
-                                "equals": "rivian"
+                                "equals": "tesla"
                               },
                               {
-                                "type": "all",
-                                "conditions": [
-                                  {
-                                    "type": "capability",
-                                    "field": "brand",
-                                    "equals": "tesla"
-                                  },
-                                  {
-                                    "type": "not",
-                                    "condition": {
-                                      "type": "capability",
-                                      "field": "tesla_has_vehicle_bus",
-                                      "equals": true
-                                    }
-                                  }
-                                ]
+                                "type": "not",
+                                "condition": {
+                                  "type": "capability",
+                                  "field": "tesla_has_vehicle_bus",
+                                  "equals": true
+                                }
                               }
                             ]
                           }
@@ -172,30 +162,20 @@
                         {
                           "type": "not",
                           "condition": {
-                            "type": "any",
+                            "type": "all",
                             "conditions": [
                               {
                                 "type": "capability",
                                 "field": "brand",
-                                "equals": "rivian"
+                                "equals": "tesla"
                               },
                               {
-                                "type": "all",
-                                "conditions": [
-                                  {
-                                    "type": "capability",
-                                    "field": "brand",
-                                    "equals": "tesla"
-                                  },
-                                  {
-                                    "type": "not",
-                                    "condition": {
-                                      "type": "capability",
-                                      "field": "tesla_has_vehicle_bus",
-                                      "equals": true
-                                    }
-                                  }
-                                ]
+                                "type": "not",
+                                "condition": {
+                                  "type": "capability",
+                                  "field": "tesla_has_vehicle_bus",
+                                  "equals": true
+                                }
                               }
                             ]
                           }

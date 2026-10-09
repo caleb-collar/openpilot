@@ -316,11 +316,11 @@ Frontend treats `blocked: true` items as read-only.
     - value: 0
       label: Remain Active
       enablement:
-        - {$ref: "#/macros/mads_full_platforms"}
+        - {$ref: "#/macros/mads_full_steering_platforms"}
     - value: 1
       label: Pause
       enablement:
-        - {$ref: "#/macros/mads_full_platforms"}
+        - {$ref: "#/macros/mads_full_steering_platforms"}
     - value: 2
       label: Disengage
   enablement:

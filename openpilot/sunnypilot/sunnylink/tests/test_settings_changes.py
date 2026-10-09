@@ -125,6 +125,17 @@ class TestMadsBrandGates(OpenpilotTestCase):
     assert _references_capability_field(item.get("enablement"), "brand")
     assert _references_capability_field(item.get("enablement"), "tesla_has_vehicle_bus")
 
+  def test_mads_steering_mode_options_allow_rivian(self, schema):
+    """MadsSteeringMode Remain Active and Pause gate on tesla_has_vehicle_bus but allow Rivian."""
+    item = _find_item(schema, "MadsSteeringMode")
+    assert item is not None
+    options = {opt["value"]: opt for opt in item.get("options", [])}
+    for opt_val in (0, 1):
+      enablement = options[opt_val].get("enablement", [])
+      assert _references_capability_field(enablement, "brand")
+      assert _references_capability_field(enablement, "tesla_has_vehicle_bus")
+      assert "rivian" not in json.dumps(enablement), f"Option {opt_val} unexpectedly restricts Rivian"
+
 
 class TestTestManeuversSection(OpenpilotTestCase):
   def test_lateral_maneuver_mode_in_test_maneuvers(self, schema):

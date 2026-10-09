@@ -32,9 +32,21 @@ macros:
       condition: {type: capability, field: device_type, equals: mici}
 
   # Mirrors selfdrive/ui/sunnypilot/layouts/.../mads_settings.py:_mads_limited_settings()
-  # Rivian + Tesla-without-vehicle-bus get the limited MADS UI (3-toggle subset).
-  # On those platforms these toggles are disabled — full MADS settings are
-  # only writable on platforms NOT in the limited-set.
+  # Only Tesla-without-vehicle-bus is restricted to Disengage-only mode.
+  # Rivian and other platforms have full steering mode choices (Remain Active, Pause, Disengage).
+  mads_full_steering_platforms:
+    - type: not
+      condition:
+        type: all
+        conditions:
+          - {type: capability, field: brand, equals: tesla}
+          - type: not
+            condition: {type: capability, field: tesla_has_vehicle_bus, equals: true}
+
+  # Platforms where MADS Main Cruise toggle and UEM toggle are configurable.
+  # Rivian forces Main Cruise OFF and UEM ON due to no LKAS/ACC main button.
+  # Tesla-without-vehicle-bus also fixes Main Cruise OFF and UEM ON.
+  # On those platforms these toggles are disabled — configurable only on platforms NOT in this set.
   mads_full_platforms:
     - type: not
       condition:
