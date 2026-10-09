@@ -12,7 +12,31 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
-## [0.2.1] - 2026-10-08
+## [0.2.2] - 2026-10-08
+
+### Added
+
+- Dedicated **Rivian Settings** menu in sunnylink and on-device Raylib UI:
+  - Added `- id: rivian` section in `pages/vehicle.yaml` and recompiled canonical `settings_ui.json`, providing a dedicated brand configuration card for Rivian R1 vehicles on the public sunnylink web portal.
+  - Implemented `RivianSettings` layout in `openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/rivian.py` for full on-device screen parity.
+  - Introduced three custom Rivian settings with sensible defaults:
+    - **Direct ESP AEB Safety Guard** (`RivianAebGuard`, default: On): ensures openpilot immediately relinquishes longitudinal authority upon vehicle AEB intervention.
+    - **Regenerative Braking Deceleration Blend** (`RivianRegenDecel`, default: Smooth EV Regen): adjusts deceleration dynamics to leverage Rivian's strong native motor regenerative braking before demanding friction braking.
+    - **Stop and Go Auto-Resume** (`RivianStopAndGoAutoResume`, default: On): automatically resumes acceleration when the lead vehicle departs from a complete standstill.
+  - Added `VIRTUAL_PARAMS` support in `openpilot/common/params.py` with filesystem persistence, enabling full read/write access across all Python processes and sunnylink RPC while keeping `params_keys.h` byte-identical to maintain prebuilt-branch invariants (plan D4).
+
+### Changed
+
+- Updated sunnylink and on-device UI warnings for **Alpha Longitudinal Control**:
+  - Replaced the inaccurate blanket warning ("will disable Automatic Emergency Braking (AEB)") in `developer.yaml`, `settings_ui.json`, and `developer.py`.
+  - Clarified that on Rivian R1 with XNOR XTREME hardware, factory Automatic Emergency Braking (AEB) remains fully active via direct Bosch ESP intervention.
+
+### Fixed
+
+- Direct ESP AEB passthrough safety enforcement:
+  - Added safety guard in `opendbc_repo/opendbc/sunnypilot/car/rivian/mads.py` (`MadsCarController.update`): immediately resets `CC.enabled = False` whenever `CS.out.stockAeb` is active, releasing openpilot longitudinal authority without delay while maintaining MADS lateral steering continuity.
+  - Wired auto-resume state evaluation in `carstate_ext.py` to allow seamless lead-vehicle departure when `RivianStopAndGoAutoResume` is enabled.
+
 
 ### Fixed
 
@@ -82,7 +106,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.1...GaryPilot
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.2...GaryPilot
+[0.2.2]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.1...r1-v0.2.2
 [0.2.1]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.0...r1-v0.2.1
 [0.2.0]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-v0.2.0
 [0.1.0]: https://github.com/caleb-collar/openpilot/tree/r1-v0.1.0

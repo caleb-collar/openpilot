@@ -55,7 +55,7 @@ def detect_version() -> str:
     if match:
       return f"v{match.group(1)}"
 
-  return "v0.2.1"
+  return "v0.2.2"
 
 
 def render_chrome_badge(text: str, font_size: int = 46) -> Image.Image:
