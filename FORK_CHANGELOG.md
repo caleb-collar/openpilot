@@ -12,6 +12,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-09
+
 ### Added
 
 - Added **Hardware Detection & Harness Diagnostic Card** and **Vehicle Controls Customization** to the **Vehicle -> Rivian** settings tab:
@@ -145,7 +147,8 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - `uv.lock` restored to upstream (it had been silently re-locked by a local `uv run`); `check_invariants.sh` now pins it.
 - `ruff` lint in the screensaver (whitespace and long lines only; the AST is unchanged).
 
-[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.2...GaryPilot
+[Unreleased]: https://github.com/caleb-collar/openpilot/compare/r1-v0.3.0...GaryPilot
+[0.3.0]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.2...r1-v0.3.0
 [0.2.2]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.1...r1-v0.2.2
 [0.2.1]: https://github.com/caleb-collar/openpilot/compare/r1-v0.2.0...r1-v0.2.1
 [0.2.0]: https://github.com/caleb-collar/openpilot/compare/r1-v0.1.0...r1-v0.2.0
