@@ -309,6 +309,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       AlertStatus.critical, AlertSize.full,
       Priority.HIGHEST, VisualAlert.fcw, AudibleAlert.none, 2.),
     ET.NO_ENTRY: NoEntryAlert("Stock AEB: Risk of Collision"),
+    ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Stock AEB: Risk of Collision"),
   },
 
   EventName.stockLkas: {

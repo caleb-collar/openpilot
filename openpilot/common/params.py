@@ -1,9 +1,11 @@
+import os
 import sys
 import json
 import ctypes
 import weakref
 import builtins
 import datetime
+import tempfile
 from pathlib import Path
 from enum import IntEnum, IntFlag
 
@@ -34,10 +36,12 @@ class ParamKeyType(IntEnum):
 # Virtual parameters supported for fork-specific platforms (e.g. Rivian R1 on GaryPilot)
 # without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
 VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
+  b"RivianEnforceStockLongitudinal": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
   b"RivianAebGuard": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
-  b"RivianRegenDecel": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
-  b"RivianStopAndGoAutoResume": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
 }
+
+# In-memory virtual param cache mapping (param_dir, key_bytes) -> (mtime_ns, bytes_val)
+_virtual_cache: dict[tuple[str, bytes], tuple[int, bytes]] = {}
 
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
@@ -171,14 +175,23 @@ class Params:
     t = self.get_type(k)
     default = self._default(k) if return_default else None
     if k in VIRTUAL_PARAMS:
+      cache_key = (self.d, k)
       try:
         p = Path(self.get_param_path()) / k.decode()
-        if p.exists():
-          value = p.read_bytes()
+        stat = p.stat()
+        mtime_ns = stat.st_mtime_ns
+        cached = _virtual_cache.get(cache_key)
+        if cached is not None and cached[0] == mtime_ns:
+          value = cached[1]
         else:
-          value = VIRTUAL_PARAMS[k][2]
+          value = p.read_bytes()
+          _virtual_cache[cache_key] = (mtime_ns, value)
+      except FileNotFoundError:
+        value = default
       except Exception:
-        value = VIRTUAL_PARAMS[k][2]
+        value = default
+      if value == b"":
+        return self._cpp2python(t, default, None, key)
       return self._cpp2python(t, value, default, key)
     value = _copy_string(params_get(self.p, k, block))
     if value == b"":
@@ -205,7 +218,17 @@ class Params:
       try:
         p = Path(self.get_param_path())
         p.mkdir(parents=True, exist_ok=True)
-        (p / k.decode()).write_bytes(value)
+        target = p / k.decode()
+        with tempfile.NamedTemporaryFile("wb", dir=p, delete=False) as tf:
+          tf.write(value)
+          tf.flush()
+          os.fsync(tf.fileno())
+          tmp_name = tf.name
+        os.replace(tmp_name, target)
+        try:
+          _virtual_cache[(self.d, k)] = (target.stat().st_mtime_ns, value)
+        except Exception:
+          _virtual_cache.pop((self.d, k), None)
       except Exception as e:
         cloudlog.warning(f"Failed to persist virtual param {key}: {e}")
       return
@@ -214,7 +237,7 @@ class Params:
   def put_bool(self, key, val, block=False):
     k = self.check_key(key)
     if k in VIRTUAL_PARAMS:
-      self.put(k, "1" if val else "0", block)
+      self.put(k, bool(val), block)
       return
     params_put_bool(self.p, self.check_key(key), val, block)
 
@@ -225,6 +248,7 @@ class Params:
         (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
       except Exception:
         pass
+      _virtual_cache.pop((self.d, k), None)
       return
     params_remove(self.p, self.check_key(key))
 

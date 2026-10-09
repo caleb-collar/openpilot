@@ -6,86 +6,54 @@ See the LICENSE.md file in the root directory for more details.
 """
 from openpilot.selfdrive.ui.sunnypilot.layouts.settings.vehicle.brands.base import BrandSettings
 from openpilot.selfdrive.ui.ui_state import ui_state
-from openpilot.system.ui.lib.multilang import tr
-from openpilot.system.ui.sunnypilot.widgets.list_view import multiple_button_item_sp, toggle_item_sp
+from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.multilang import tr, tr_noop
+from openpilot.system.ui.widgets import DialogResult
+from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
+from openpilot.system.ui.sunnypilot.widgets.list_view import toggle_item_sp
+
+
+DESCRIPTIONS = {
+  'enforce_stock_longitudinal': tr_noop(
+    'sunnypilot will not take over control of gas and brakes. Factory Rivian ACC longitudinal control will be used while retaining MADS steering assist.'
+  ),
+}
 
 
 class RivianSettings(BrandSettings):
   def __init__(self):
     super().__init__()
 
-    self.aeb_guard_toggle = toggle_item_sp(
-      tr("Direct ESP AEB Safety Guard"),
-      "",
-      param="RivianAebGuard",
-      callback=self._on_settings_changed,
+    self.enforce_stock_longitudinal = toggle_item_sp(
+      lambda: tr("Enforce Factory Longitudinal Control"),
+      description=lambda: tr(DESCRIPTIONS["enforce_stock_longitudinal"]),
+      initial_state=ui_state.params.get_bool("RivianEnforceStockLongitudinal"),
+      callback=self._on_enable_enforce_stock_longitudinal,
+      enabled=lambda: not ui_state.engaged,
     )
 
-    regen_texts = [tr("Smooth (EV Regen)"), tr("Standard"), tr("Dynamic")]
-    self.regen_decel_item = multiple_button_item_sp(
-      tr("Regenerative Braking Deceleration Blend"),
-      "",
-      regen_texts,
-      button_width=250,
-      callback=self._on_regen_selected,
-      param="RivianRegenDecel",
-      inline=False,
-    )
+    self.items = [
+      self.enforce_stock_longitudinal,
+    ]
 
-    self.auto_resume_toggle = toggle_item_sp(
-      tr("Stop and Go Auto-Resume"),
-      "",
-      param="RivianStopAndGoAutoResume",
-      callback=self._on_settings_changed,
-    )
+  def _on_enable_enforce_stock_longitudinal(self, state: bool):
+    if state:
+      def confirm_callback(result: int):
+        if result == DialogResult.CONFIRM:
+          ui_state.params.put_bool("RivianEnforceStockLongitudinal", True)
+          if ui_state.params.get_bool("AlphaLongitudinalEnabled"):
+            ui_state.params.put_bool("AlphaLongitudinalEnabled", False)
+          ui_state.params.put_bool("OnroadCycleRequested", True)
+        else:
+          self.enforce_stock_longitudinal.action_item.set_state(False)
 
-    self.items = [self.aeb_guard_toggle, self.regen_decel_item, self.auto_resume_toggle]
-
-  def _on_settings_changed(self, _):
-    self.update_settings()
-
-  @staticmethod
-  def _on_regen_selected(index):
-    ui_state.params.put("RivianRegenDecel", index)
+      content = (f"<h1>{self.enforce_stock_longitudinal.title}</h1><br>" +
+                 f"<p>{self.enforce_stock_longitudinal.description}</p>")
+      gui_app.show_dialog(ConfirmDialog(content, tr("Confirm"), confirm_callback))
+    else:
+      ui_state.params.put_bool("RivianEnforceStockLongitudinal", False)
+      ui_state.params.put_bool("OnroadCycleRequested", True)
 
   def update_settings(self):
-    is_offroad = ui_state.is_offroad()
-    long_enabled = ui_state.has_longitudinal_control
-
-    offroad_msg = tr("Enable \"Always Offroad\" in Device panel, or turn vehicle off to toggle.") if not is_offroad else ""
-
-    # AEB Guard description
-    aeb_desc = tr("Ensures openpilot instantly relinquishes longitudinal control whenever factory Automatic Emergency Braking (AEB) intervenes, allowing the vehicle Bosch ESP unit full braking authority without delay.")
-    self.aeb_guard_toggle.action_item.set_enabled(is_offroad)
-    self.aeb_guard_toggle.set_description(f"<b>{offroad_msg}</b><br><br>{aeb_desc}" if offroad_msg else aeb_desc)
-
-    # Regen deceleration blend description
-    regen_descs = [
-      tr("Smooth deceleration prioritizing native motor regen coast-down, comfortable for EV driving."),
-      tr("Standard balanced deceleration curve."),
-      tr("Dynamic deceleration curve with stronger initial response."),
-    ]
-    regen_param = int(ui_state.params.get("RivianRegenDecel") or "0")
-    cur_regen_desc = regen_descs[regen_param] if regen_param < len(regen_descs) else regen_descs[0]
-
-    if not is_offroad:
-      cur_regen_desc = f"<b>{offroad_msg}</b><br><br>{cur_regen_desc}"
-    elif not long_enabled:
-      disabled_long_msg = tr("This feature is unavailable because sunnypilot Longitudinal Control (Alpha) is not enabled.")
-      cur_regen_desc = f"<b>{disabled_long_msg}</b><br><br>{cur_regen_desc}"
-
-    self.regen_decel_item.action_item.set_enabled(is_offroad and long_enabled)
-    self.regen_decel_item.set_description(cur_regen_desc)
-    self.regen_decel_item.show_description(True)
-    self.regen_decel_item.action_item.set_selected_button(regen_param)
-
-    # Auto-resume description
-    resume_desc = tr("Automatically resumes acceleration when lead vehicle departs from a complete standstill without requiring an accelerator pedal press.")
-    if not is_offroad:
-      resume_desc = f"<b>{offroad_msg}</b><br><br>{resume_desc}"
-    elif not long_enabled:
-      disabled_long_msg = tr("This feature is unavailable because sunnypilot Longitudinal Control (Alpha) is not enabled.")
-      resume_desc = f"<b>{disabled_long_msg}</b><br><br>{resume_desc}"
-
-    self.auto_resume_toggle.action_item.set_enabled(is_offroad and long_enabled)
-    self.auto_resume_toggle.set_description(resume_desc)
+    is_engaged = ui_state.engaged
+    self.enforce_stock_longitudinal.action_item.set_enabled(not is_engaged)

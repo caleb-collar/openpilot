@@ -39,5 +39,6 @@ class MadsCarController:
     # longitudinal authority so the vehicle Bosch ESP unit has full unobstructed braking control.
     if getattr(CS.out, "stockAeb", False):
       CC.enabled = False
+      CC.cruiseControl.cancel = True
 
     self.mads = self.mads_status_update(CC, CC_SP, CS)

@@ -19,23 +19,22 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - Dedicated **Rivian Settings** menu in sunnylink and on-device Raylib UI:
   - Added `- id: rivian` section in `pages/vehicle.yaml` and recompiled canonical `settings_ui.json`, providing a dedicated brand configuration card for Rivian R1 vehicles on the public sunnylink web portal.
   - Implemented `RivianSettings` layout in `openpilot/selfdrive/ui/sunnypilot/layouts/settings/vehicle/brands/rivian.py` for full on-device screen parity.
-  - Introduced three custom Rivian settings with sensible defaults:
-    - **Direct ESP AEB Safety Guard** (`RivianAebGuard`, default: On): ensures openpilot immediately relinquishes longitudinal authority upon vehicle AEB intervention.
-    - **Regenerative Braking Deceleration Blend** (`RivianRegenDecel`, default: Smooth EV Regen): adjusts deceleration dynamics to leverage Rivian's strong native motor regenerative braking before demanding friction braking.
-    - **Stop and Go Auto-Resume** (`RivianStopAndGoAutoResume`, default: On): automatically resumes acceleration when the lead vehicle departs from a complete standstill.
-  - Added `VIRTUAL_PARAMS` support in `openpilot/common/params.py` with filesystem persistence, enabling full read/write access across all Python processes and sunnylink RPC while keeping `params_keys.h` byte-identical to maintain prebuilt-branch invariants (plan D4).
+  - Added **Enforce Factory Longitudinal Control** (`RivianEnforceStockLongitudinal`, default: Off): enables drivers to seamlessly fallback to native Rivian ACC radar/speed control while preserving continuous sunnypilot MADS steering assist (architecturally aligned with Toyota's stock longitudinal enforcement).
+  - Added `VIRTUAL_PARAMS` support in `openpilot/common/params.py` with thread-safe in-memory caching and atomic file writes (`NamedTemporaryFile` + `os.replace`), eliminating file-tearing and disk stalls in real-time loops while keeping `params_keys.h` byte-identical to maintain prebuilt-branch invariants (plan D4).
 
 ### Changed
 
 - Updated sunnylink and on-device UI warnings for **Alpha Longitudinal Control**:
   - Replaced the inaccurate blanket warning ("will disable Automatic Emergency Braking (AEB)") in `developer.yaml`, `settings_ui.json`, and `developer.py`.
-  - Clarified that on Rivian R1 with XNOR XTREME hardware, factory Automatic Emergency Braking (AEB) remains fully active via direct Bosch ESP intervention.
+  - Clarified that on vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct Bosch ESP intervention.
 
 ### Fixed
 
-- Direct ESP AEB passthrough safety enforcement:
-  - Added safety guard in `opendbc_repo/opendbc/sunnypilot/car/rivian/mads.py` (`MadsCarController.update`): immediately resets `CC.enabled = False` whenever `CS.out.stockAeb` is active, releasing openpilot longitudinal authority without delay while maintaining MADS lateral steering continuity.
-  - Wired auto-resume state evaluation in `carstate_ext.py` to allow seamless lead-vehicle departure when `RivianStopAndGoAutoResume` is enabled.
+- Hardened factory AEB collision avoidance and fail-safe disengagement:
+  - Added `ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Stock AEB: Risk of Collision")` to `EventName.stockAeb` in `openpilot/selfdrive/selfdrived/events.py`: forces `controlsd` to immediately transition to `disabled` with an audible alert, resetting integrators and preventing dangerous post-AEB acceleration snapback.
+  - Enforced `CC.cruiseControl.cancel = True` alongside `CC.enabled = False` in `opendbc_repo/opendbc/sunnypilot/car/rivian/mads.py` (`MadsCarController.update`): immediately halts openpilot acceleration requests while vehicle Bosch ESP executes emergency braking.
+  - Removed dangerous standstill hold spoofing (`ret.cruiseState.standstill = False`) and 100 Hz param polling from `carstate_ext.py`, restoring openpilot's native hold state machine and preventing unexpected creep in intersection stop-and-go scenarios.
+  - Cleaned up unactuated placeholder settings to ensure transparent, dependable controls telemetry.
 
 
 ### Fixed

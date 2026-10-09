@@ -240,13 +240,9 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     assert rivian_sec is not None, "vehicle_settings.rivian section missing"
     assert rivian_sec.get("title") == "Rivian Settings"
     items = {item["key"]: item for item in rivian_sec.get("items", [])}
-    assert "RivianAebGuard" in items
-    assert items["RivianAebGuard"]["widget"] == "toggle"
-    assert "RivianRegenDecel" in items
-    assert items["RivianRegenDecel"]["widget"] == "multiple_button"
-    assert len(items["RivianRegenDecel"]["options"]) == 3
-    assert "RivianStopAndGoAutoResume" in items
-    assert items["RivianStopAndGoAutoResume"]["widget"] == "toggle"
+    assert "RivianEnforceStockLongitudinal" in items
+    assert items["RivianEnforceStockLongitudinal"]["widget"] == "toggle"
+    assert items["RivianEnforceStockLongitudinal"]["needs_onroad_cycle"] is True
 
   def test_alpha_longitudinal_warning_mentions_rivian(self, schema):
     """AlphaLongitudinalEnabled description must accurately reflect Rivian XNOR XTREME AEB retention."""

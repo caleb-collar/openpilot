@@ -31,33 +31,13 @@ sections:
   title: Rivian Settings
   description: 'Custom vehicle dynamics and safety integration for Rivian R1 vehicles on GaryPilot.'
   items:
-  - key: RivianAebGuard
+  - key: RivianEnforceStockLongitudinal
     widget: toggle
-    title: Direct ESP AEB Safety Guard
-    description: 'Ensures openpilot instantly relinquishes longitudinal control whenever factory Automatic Emergency Braking (AEB) intervenes, allowing the vehicle Bosch ESP unit full braking authority without delay.'
+    needs_onroad_cycle: true
+    title: Enforce Factory Longitudinal Control
+    description: 'sunnypilot will not take over gas and brakes. Factory Rivian ACC longitudinal control will be used while retaining MADS steering assist.'
     enablement:
-    - $ref: '#/macros/offroad'
-  - key: RivianRegenDecel
-    widget: multiple_button
-    title: Regenerative Braking Deceleration Blend
-    description: 'Adjusts how openpilot blends deceleration to take advantage of Rivian strong native regenerative braking before demanding friction braking.'
-    options:
-    - value: 0
-      label: Smooth (EV Regen)
-    - value: 1
-      label: Standard
-    - value: 2
-      label: Dynamic
-    enablement:
-    - $ref: '#/macros/offroad'
-    - $ref: '#/macros/longitudinal'
-  - key: RivianStopAndGoAutoResume
-    widget: toggle
-    title: Stop and Go Auto-Resume
-    description: 'Automatically resumes acceleration when lead vehicle departs from a complete standstill without requiring an accelerator pedal press.'
-    enablement:
-    - $ref: '#/macros/offroad'
-    - $ref: '#/macros/longitudinal'
+    - $ref: '#/macros/not_engaged'
 - id: subaru
   title: Subaru Settings
   description: ''

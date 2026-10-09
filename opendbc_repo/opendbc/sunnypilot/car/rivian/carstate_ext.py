@@ -41,8 +41,6 @@ class CarStateExt:
     # stock MadsSteeringMode default, REMAIN_ACTIVE, so lateral steers through braking in turns. Pushing the stalk to
     # UP_2 is the reliable full disengage. Never write this param here: the user's choice in settings always wins.
     self.steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, self.params)
-    self.auto_resume = self.params.get_bool("RivianStopAndGoAutoResume")
-    self.param_check_counter = 0
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp = can_parsers[Bus.pt]
@@ -128,13 +126,6 @@ class CarStateExt:
 
       self.set_speed = max(MIN_SET_SPEED, min(self.set_speed, MAX_SET_SPEED))
       ret.cruiseState.speed = self.set_speed
-
-      self.param_check_counter += 1
-      if self.param_check_counter % 100 == 0:
-        self.auto_resume = self.params.get_bool("RivianStopAndGoAutoResume")
-
-      if self.auto_resume and ret.standstill:
-        ret.cruiseState.standstill = False
 
     if self.CP.enableBsm:
       ret.leftBlindspot = cp_park.vl["BSM_BlindSpotIndicator_Fwd"]["BSM_BlindSpotIndicator_Left"] != 0
