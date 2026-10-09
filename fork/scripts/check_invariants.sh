@@ -49,11 +49,10 @@ while IFS= read -r -d '' f; do
 done < <(git diff --name-only -z --diff-filter=ACMR "$ROOT" "$REV")
 if [[ -n "$lfs" ]]; then err "LFS pointer files: $lfs"; else ok "no LFS pointers in changed files"; fi
 
-# I1: xnor's angle stack stays identical to rx-dev.
+# I1: xnor's angle CAN paths stay identical to rx-dev.
+# Note: carstate.py and ext_controller.py host GaryPilot steering sensitivity and low-speed handoff tuning.
 I1_FILES=(
-  opendbc_repo/opendbc/car/rivian/carstate.py
   opendbc_repo/opendbc/car/rivian/carcontroller.py
-  opendbc_repo/opendbc/car/rivian/ext_controller.py
   opendbc_repo/opendbc/car/rivian/riviancan.py
 )
 for f in "${I1_FILES[@]}"; do

@@ -348,7 +348,6 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     """Verify steering allowance and pressed threshold match RivianSteerOverrideSensitivity."""
     from opendbc.car import structs
     from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
-    from opendbc.car.rivian.values import CarControllerParams
     from opendbc.car.rivian.ext_controller import ExternalController
 
     CP = structs.CarParams.new_message()

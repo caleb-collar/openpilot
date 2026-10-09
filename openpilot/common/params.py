@@ -57,7 +57,7 @@ def _load_header_keys() -> list[bytes]:
   header_path = Path(__file__).parent / "params_keys.h"
   if header_path.exists():
     try:
-      with open(header_path, "r", encoding="utf-8") as f:
+      with open(header_path, encoding="utf-8") as f:
         for line in f:
           line = line.strip()
           if line.startswith('{"') and '",' in line:

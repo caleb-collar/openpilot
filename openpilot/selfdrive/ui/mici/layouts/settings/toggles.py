@@ -49,7 +49,7 @@ class LongitudinalConfirmPage(NavScroller):
       GreyBigButton("enabling longitudinal control", "scroll to continue",
                     gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
       GreyBigButton("", "On platforms without separate AEB channels, native AEB may be disabled."),
-      GreyBigButton("", "On vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention."),
+      GreyBigButton("", "On vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention."),  # noqa: E501
       GreyBigButton("", "On this car, GaryPilot defaults to the vehicle's built-in ACC instead of GaryPilot's longitudinal control."),
       GreyBigButton("", "Enabling this will switch to GaryPilot longitudinal control."),
       GreyBigButton("", "Requires longitudinal upgrade hardware (such as XNOR XTREME)."),

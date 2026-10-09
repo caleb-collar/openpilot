@@ -33,12 +33,12 @@ class RivianSettings(BrandSettings):
     self.long_harness_item = text_item(
       tr("Longitudinal Harness / XNOR (0x131a)"),
       lambda: self._long_status,
-      description=tr("Longitudinal upgrade / XNOR XTREME harness on CAN bus 1 at address 0x131a. Enables radar forwarding, BSM, and openpilot longitudinal control.")
+      description=tr("Longitudinal upgrade / XNOR XTREME harness on CAN bus 1 at address 0x131a. Enables radar forwarding, BSM, and openpilot longitudinal control.")  # noqa: E501
     )
     self.platform_gen_item = text_item(
       tr("Vehicle Generation"),
       lambda: self._gen_status,
-      description=tr("Rivian vehicle electrical architecture generation. Gen 1 includes capacitive steering wheel touch; Gen 2 uses vision/torque driver monitoring.")
+      description=tr("Rivian vehicle electrical architecture generation. Gen 1 includes capacitive steering wheel touch; Gen 2 uses vision/torque driver monitoring.")  # noqa: E501
     )
     self.radar_item = text_item(
       tr("Front Radar (Continental ARS430)"),
@@ -77,7 +77,7 @@ class RivianSettings(BrandSettings):
     sensitivity_texts = [tr("Light"), tr("Standard"), tr("Firm")]
     self.steer_sensitivity_item = multiple_button_item_sp(
       tr("Driver Override Sensitivity"),
-      tr("Adjust steering resistance threshold before openpilot yields to driver intervention. Light allows effortless steering override; Firm holds the lane more rigidly against minor steering touches."),
+      tr("Adjust steering resistance threshold before openpilot yields to driver intervention. Light allows effortless steering override; Firm holds the lane more rigidly against minor steering touches."),  # noqa: E501
       sensitivity_texts,
       button_width=250,
       callback=self._on_steer_sensitivity_selected,
