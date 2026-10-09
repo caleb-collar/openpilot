@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 import ctypes
 import weakref
 import builtins
@@ -37,11 +38,10 @@ class ParamKeyType(IntEnum):
 # without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
 VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
   b"RivianEnforceStockLongitudinal": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
-  b"RivianAebGuard": (ParamKeyType.BOOL, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
 }
 
-# In-memory virtual param cache mapping (param_dir, key_bytes) -> (mtime_ns, bytes_val)
-_virtual_cache: dict[tuple[str, bytes], tuple[int, bytes]] = {}
+# In-memory virtual param cache mapping (param_dir, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
+_virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}
 
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
@@ -140,6 +140,14 @@ class Params:
 
   def clear_all(self, tx_flag=ParamKeyFlag.ALL):
     params_clear_all(self.p, int(tx_flag))
+    if tx_flag == ParamKeyFlag.ALL:
+      _virtual_cache.clear()
+      try:
+        p = Path(self.get_param_path())
+        for k in VIRTUAL_PARAMS:
+          (p / k.decode()).unlink(missing_ok=True)
+      except Exception:
+        pass
 
   def check_key(self, key):
     key = ensure_bytes(key)
@@ -176,17 +184,23 @@ class Params:
     default = self._default(k) if return_default else None
     if k in VIRTUAL_PARAMS:
       cache_key = (self.d, k)
+      now = time.monotonic()
+      cached = _virtual_cache.get(cache_key)
+      if cached is not None:
+        mtime_ns, val, cache_time = cached
+        if val is None and (now - cache_time < 0.5):
+          return self._cpp2python(t, default, None, key)
       try:
         p = Path(self.get_param_path()) / k.decode()
         stat = p.stat()
         mtime_ns = stat.st_mtime_ns
-        cached = _virtual_cache.get(cache_key)
-        if cached is not None and cached[0] == mtime_ns:
+        if cached is not None and cached[0] == mtime_ns and cached[1] is not None:
           value = cached[1]
         else:
           value = p.read_bytes()
-          _virtual_cache[cache_key] = (mtime_ns, value)
+          _virtual_cache[cache_key] = (mtime_ns, value, now)
       except FileNotFoundError:
+        _virtual_cache[cache_key] = (0, None, now)
         value = default
       except Exception:
         value = default
@@ -215,22 +229,39 @@ class Params:
     k = self.check_key(key)
     value = self._put_cast(k, dat)
     if k in VIRTUAL_PARAMS:
+      p = Path(self.get_param_path())
+      p.mkdir(parents=True, exist_ok=True)
+      target = p / k.decode()
+      tmp_name = None
       try:
-        p = Path(self.get_param_path())
-        p.mkdir(parents=True, exist_ok=True)
-        target = p / k.decode()
         with tempfile.NamedTemporaryFile("wb", dir=p, delete=False) as tf:
           tf.write(value)
           tf.flush()
           os.fsync(tf.fileno())
           tmp_name = tf.name
         os.replace(tmp_name, target)
+        tmp_name = None  # replaced successfully
+        if sys.platform != "win32":
+          try:
+            dir_fd = os.open(str(p), os.O_RDONLY | os.O_DIRECTORY)
+            try:
+              os.fsync(dir_fd)
+            finally:
+              os.close(dir_fd)
+          except Exception:
+            pass
         try:
-          _virtual_cache[(self.d, k)] = (target.stat().st_mtime_ns, value)
+          _virtual_cache[(self.d, k)] = (target.stat().st_mtime_ns, value, time.monotonic())
         except Exception:
           _virtual_cache.pop((self.d, k), None)
       except Exception as e:
         cloudlog.warning(f"Failed to persist virtual param {key}: {e}")
+      finally:
+        if tmp_name is not None:
+          try:
+            os.unlink(tmp_name)
+          except Exception:
+            pass
       return
     params_put(self.p, k, value, len(value), block)
 
@@ -263,7 +294,7 @@ class Params:
     return ParamKeyType(params_get_key_type(self.p, self.check_key(key)))
 
   def all_keys(self, flag=ParamKeyFlag.ALL):
-    virtual_keys = [k for k, meta in VIRTUAL_PARAMS.items() if (meta[1] & flag) == meta[1] or flag == ParamKeyFlag.ALL]
+    virtual_keys = [k for k, meta in VIRTUAL_PARAMS.items() if (flag == ParamKeyFlag.ALL) or bool(meta[1] & flag)]
     if flag == ParamKeyFlag.ALL:
       keys = []
       for i in range(params_keys_size(self.p)):

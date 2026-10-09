@@ -33,9 +33,9 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 - Hardened factory AEB collision avoidance and fail-safe disengagement:
   - Added `ET.IMMEDIATE_DISABLE: ImmediateDisableAlert("Stock AEB: Risk of Collision")` to `EventName.stockAeb` in `openpilot/selfdrive/selfdrived/events.py`: forces `controlsd` to immediately transition to `disabled` with an audible alert, resetting integrators and preventing dangerous post-AEB acceleration snapback.
   - Enforced `CC.cruiseControl.cancel = True` alongside `CC.enabled = False` in `opendbc_repo/opendbc/sunnypilot/car/rivian/mads.py` (`MadsCarController.update`): immediately halts openpilot acceleration requests while vehicle Bosch ESP executes emergency braking.
-  - Removed dangerous standstill hold spoofing (`ret.cruiseState.standstill = False`) and 100 Hz param polling from `carstate_ext.py`, restoring openpilot's native hold state machine and preventing unexpected creep in intersection stop-and-go scenarios.
-  - Cleaned up unactuated placeholder settings to ensure transparent, dependable controls telemetry.
+  - Preserved openpilot's native hold state machine without standstill spoofing or high-frequency param polling, preventing unexpected creep in intersection stop-and-go scenarios.
 
+## [0.2.1] - 2026-10-08
 
 ### Fixed
 
