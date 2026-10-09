@@ -235,8 +235,9 @@ class TestNotEngagedReplacement(OpenpilotTestCase):
 
 class TestGaryPilotRivianSettings(OpenpilotTestCase):
   def test_no_redundant_rivian_vehicle_settings(self, schema):
-    """Rivian must not expose redundant opt-out toggles under vehicle settings (handled via Developer Alpha Long)."""
+    """Rivian must not expose redundant opt-out toggles or empty cards under vehicle settings (handled via Developer Alpha Long)."""
     assert "RivianEnforceStockLongitudinal" not in [item.get("key") for item in _walk_items(schema)]
+    assert "rivian" not in schema.get("vehicle_settings", {})
 
   def test_alpha_longitudinal_warning_mentions_rivian(self, schema):
     """AlphaLongitudinalEnabled description must accurately reflect Rivian XNOR XTREME AEB retention."""
