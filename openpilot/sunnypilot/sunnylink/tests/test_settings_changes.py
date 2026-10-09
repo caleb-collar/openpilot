@@ -235,9 +235,21 @@ class TestNotEngagedReplacement(OpenpilotTestCase):
 
 class TestGaryPilotRivianSettings(OpenpilotTestCase):
   def test_no_redundant_rivian_vehicle_settings(self, schema):
-    """Rivian must not expose redundant opt-out toggles or empty cards under vehicle settings (handled via Developer Alpha Long)."""
+    """Rivian must not expose redundant opt-out toggles or empty cards under vehicle settings (handled via Toggles panel)."""
     assert "RivianEnforceStockLongitudinal" not in [item.get("key") for item in _walk_items(schema)]
     assert "rivian" not in schema.get("vehicle_settings", {})
+
+  def test_longitudinal_control_in_toggles_not_developer(self, schema):
+    """GaryPilot longitudinal control must reside in Toggles panel, not Developer."""
+    toggles_panel = next((p for p in schema.get("panels", []) if p.get("id") == "toggles"), None)
+    assert toggles_panel is not None, "Toggles panel not found"
+    toggles_keys = [item.get("key") for section in toggles_panel.get("sections", []) for item in section.get("items", [])]
+    assert "AlphaLongitudinalEnabled" in toggles_keys, "AlphaLongitudinalEnabled not found in Toggles panel"
+
+    dev_panel = next((p for p in schema.get("panels", []) if p.get("id") == "developer"), None)
+    assert dev_panel is not None, "Developer panel not found"
+    dev_keys = [item.get("key") for section in dev_panel.get("sections", []) for item in section.get("items", [])]
+    assert "AlphaLongitudinalEnabled" not in dev_keys, "AlphaLongitudinalEnabled still present in Developer panel"
 
   def test_alpha_longitudinal_warning_mentions_rivian(self, schema):
     """AlphaLongitudinalEnabled description must accurately reflect Rivian XNOR XTREME AEB retention."""
@@ -246,4 +258,35 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     desc = item.get("description", "")
     assert "Rivian R1 with XNOR XTREME hardware" in desc
     assert "factory Automatic Emergency Braking (AEB) remains fully active" in desc
+
+  def test_rivian_interface_hardware_check_gating(self):
+    """Rivian longitudinal control must be strictly gated by hardware check (0x131a)."""
+    from opendbc.car.rivian.values import CAR
+    from opendbc.car.rivian.interface import CarInterface
+
+    # Case 1: No longitudinal hardware upgrade (0x131a missing), toggle disabled (default)
+    fp_no_hw = {0: {0x321: 8}, 1: {0x1310: 8}, 2: {}}
+    cp1 = CarInterface.get_params(CAR.RIVIAN_R1, fp_no_hw, [], alpha_long=False, is_release=False, docs=False)
+    CarInterface.get_params_sp(cp1, CAR.RIVIAN_R1, fp_no_hw, [], alpha_long=False, is_release_sp=False, docs=False)
+    assert not cp1.alphaLongitudinalAvailable
+    assert not cp1.openpilotLongitudinalControl
+
+    # Case 2: No longitudinal hardware upgrade (0x131a missing), toggle enabled
+    cp2 = CarInterface.get_params(CAR.RIVIAN_R1, fp_no_hw, [], alpha_long=True, is_release=False, docs=False)
+    CarInterface.get_params_sp(cp2, CAR.RIVIAN_R1, fp_no_hw, [], alpha_long=True, is_release_sp=False, docs=False)
+    assert not cp2.alphaLongitudinalAvailable
+    assert not cp2.openpilotLongitudinalControl
+
+    # Case 3: Longitudinal hardware upgrade present (0x131a on bus 1), toggle disabled (default state)
+    fp_with_hw = {0: {0x321: 8}, 1: {0x1310: 8, 0x131a: 8}, 2: {}}
+    cp3 = CarInterface.get_params(CAR.RIVIAN_R1, fp_with_hw, [], alpha_long=False, is_release=False, docs=False)
+    CarInterface.get_params_sp(cp3, CAR.RIVIAN_R1, fp_with_hw, [], alpha_long=False, is_release_sp=False, docs=False)
+    assert cp3.alphaLongitudinalAvailable
+    assert not cp3.openpilotLongitudinalControl
+
+    # Case 4: Longitudinal hardware upgrade present (0x131a on bus 1), toggle enabled
+    cp4 = CarInterface.get_params(CAR.RIVIAN_R1, fp_with_hw, [], alpha_long=True, is_release=False, docs=False)
+    CarInterface.get_params_sp(cp4, CAR.RIVIAN_R1, fp_with_hw, [], alpha_long=True, is_release_sp=False, docs=False)
+    assert cp4.alphaLongitudinalAvailable
+    assert cp4.openpilotLongitudinalControl
 

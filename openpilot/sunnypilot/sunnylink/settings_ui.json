@@ -1569,6 +1569,38 @@
               ]
             },
             {
+              "key": "AlphaLongitudinalEnabled",
+              "widget": "toggle",
+              "needs_onroad_cycle": true,
+              "title": "GaryPilot Longitudinal Control",
+              "description": "Use the GaryPilot system for longitudinal control (gas and brake). When disabled, the vehicle's stock ACC system handles speed and distance. On vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention. Requires longitudinal upgrade hardware (such as XNOR XTREME). Changing this setting will restart GaryPilot if the car is powered on.",
+              "visibility": [
+                {
+                  "type": "all",
+                  "conditions": [
+                    {
+                      "type": "capability",
+                      "field": "alpha_long_available",
+                      "equals": true
+                    },
+                    {
+                      "type": "not",
+                      "condition": {
+                        "type": "capability",
+                        "field": "has_icbm",
+                        "equals": true
+                      }
+                    }
+                  ]
+                }
+              ],
+              "enablement": [
+                {
+                  "type": "not_engaged"
+                }
+              ]
+            },
+            {
               "key": "IsLdwEnabled",
               "widget": "toggle",
               "title": "Enable Lane Departure Warnings",
@@ -1797,38 +1829,6 @@
               "enablement": [
                 {
                   "type": "offroad_only"
-                }
-              ]
-            },
-            {
-              "key": "AlphaLongitudinalEnabled",
-              "widget": "toggle",
-              "needs_onroad_cycle": true,
-              "title": "sunnypilot Longitudinal Control (Alpha)",
-              "description": "WARNING: sunnypilot longitudinal control is in alpha. On platforms without separate AEB channels, native AEB may be disabled. On vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention. On this car, sunnypilot defaults to the car's built-in ACC instead of sunnypilot's longitudinal control. Enable this to switch to sunnypilot longitudinal control. Enabling Experimental mode is recommended when enabling sunnypilot longitudinal control alpha. Changing this setting will restart sunnypilot if the car is powered on.",
-              "visibility": [
-                {
-                  "type": "all",
-                  "conditions": [
-                    {
-                      "type": "capability",
-                      "field": "alpha_long_available",
-                      "equals": true
-                    },
-                    {
-                      "type": "not",
-                      "condition": {
-                        "type": "capability",
-                        "field": "has_icbm",
-                        "equals": true
-                      }
-                    }
-                  ]
-                }
-              ],
-              "enablement": [
-                {
-                  "type": "not_engaged"
                 }
               ]
             },

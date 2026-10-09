@@ -12,6 +12,14 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+### Changed
+
+- Relocated longitudinal control from Developer "(Alpha)" into the primary on-device and Sunnylink **Toggles** menu:
+  - Added **GaryPilot Longitudinal Control** to `openpilot/selfdrive/ui/layouts/settings/toggles.py` and `settings_ui_src/pages/toggles.yaml` with safety confirmation dialog.
+  - Retained default disabled state (`AlphaLongitudinalEnabled = "0"` / `false`), ensuring factory Rivian ACC is active unless explicitly enabled by the driver.
+  - Enforced strict hardware check gating in `opendbc_repo/opendbc/car/rivian/interface.py`: `alphaLongitudinalAvailable` and `openpilotLongitudinalControl` strictly require detection of the Rivian longitudinal harness upgrade / XNOR XTREME CAN heartbeat (`0x131a` on bus 1). Vehicles without the longitudinal hardware upgrade cannot enable longitudinal control even if the parameter were set.
+  - Completely removed deprecated `_alpha_long_toggle` and associated modals from `openpilot/selfdrive/ui/layouts/settings/developer.py`, `openpilot/selfdrive/ui/mici/layouts/settings/developer.py`, and `settings_ui_src/pages/developer.yaml`.
+
 ### Documentation
 
 - Added comprehensive **Integration, Behavior & Safety Matrix** to `README.md`:

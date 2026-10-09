@@ -21,6 +21,12 @@ DESCRIPTIONS = {
     "Use the GaryPilot system for adaptive cruise control and lane keep driver assistance. " +
     "Your attention is required at all times to use this feature."
   ),
+  "AlphaLongitudinalEnabled": tr_noop(
+    "Use the GaryPilot system for longitudinal control (gas and brake). When disabled, the vehicle's " +
+    "stock ACC system handles speed and distance. On vehicles with isolated AEB architecture (such as " +
+    "Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active " +
+    "via direct ESP intervention. Requires longitudinal upgrade hardware (such as XNOR XTREME)."
+  ),
   "DisengageOnAccelerator": tr_noop("When enabled, pressing the accelerator pedal will disengage GaryPilot."),
   "LongitudinalPersonality": tr_noop(
     "Standard is recommended. In aggressive mode, GaryPilot will follow lead cars closer and be more aggressive with the gas and brake. " +
@@ -50,6 +56,12 @@ class TogglesLayout(Widget):
         lambda: tr("Enable GaryPilot"),
         DESCRIPTIONS["OpenpilotEnabledToggle"],
         "chffr_wheel.png",
+        True,
+      ),
+      "AlphaLongitudinalEnabled": (
+        lambda: tr("GaryPilot Longitudinal Control"),
+        DESCRIPTIONS["AlphaLongitudinalEnabled"],
+        "speed_limit.png",
         True,
       ),
       "ExperimentalMode": (
@@ -172,6 +184,11 @@ class TogglesLayout(Widget):
     )
 
     if ui_state.CP is not None:
+      alpha_avail = ui_state.CP.alphaLongitudinalAvailable
+      self._toggles["AlphaLongitudinalEnabled"].set_visible(alpha_avail)
+      if not alpha_avail:
+        self._params.remove("AlphaLongitudinalEnabled")
+
       if ui_state.has_longitudinal_control:
         self._toggles["ExperimentalMode"].action_item.set_enabled(True)
         self._toggles["ExperimentalMode"].set_description(e2e_description)
@@ -185,16 +202,13 @@ class TogglesLayout(Widget):
 
         unavailable = tr("Experimental mode is currently unavailable on this car since the car's stock ACC is used for longitudinal control.")
 
-        long_desc = unavailable + " " + tr("sunnypilot longitudinal control may come in a future update.")
+        long_desc = unavailable + " " + tr("GaryPilot longitudinal control may come in a future update.")
         if ui_state.CP.alphaLongitudinalAvailable:
-          if self._is_release:
-            long_desc = unavailable + " " + tr("An alpha version of sunnypilot longitudinal control can be tested, along with " +
-                                               "Experimental mode, on non-release branches.")
-          else:
-            long_desc = tr("Enable the sunnypilot longitudinal control (alpha) toggle to allow Experimental mode.")
+          long_desc = tr("Enable the GaryPilot Longitudinal Control toggle to allow Experimental mode.")
 
         self._toggles["ExperimentalMode"].set_description("<b>" + long_desc + "</b><br><br>" + e2e_description)
     else:
+      self._toggles["AlphaLongitudinalEnabled"].set_visible(False)
       self._toggles["ExperimentalMode"].set_description(e2e_description)
 
     self._update_experimental_mode_icon()
@@ -215,6 +229,26 @@ class TogglesLayout(Widget):
   def _update_experimental_mode_icon(self):
     icon = "experimental.png" if self._toggles["ExperimentalMode"].action_item.get_state() else "experimental_white.png"
     self._toggles["ExperimentalMode"].set_icon(icon)
+
+  def _handle_alpha_longitudinal_toggle(self, state: bool):
+    if state:
+      def confirm_callback(result: DialogResult):
+        if result == DialogResult.CONFIRM:
+          self._params.put_bool("AlphaLongitudinalEnabled", True, block=True)
+          self._params.put_bool("OnroadCycleRequested", True, block=True)
+          self._update_toggles()
+        else:
+          self._toggles["AlphaLongitudinalEnabled"].action_item.set_state(False)
+
+      # show confirmation dialog
+      content = (f"<h1>{self._toggles['AlphaLongitudinalEnabled'].title}</h1><br>" +
+                 f"<p>{self._toggles['AlphaLongitudinalEnabled'].description}</p>")
+      dlg = ConfirmDialog(content, tr("Enable"), rich=True, callback=confirm_callback)
+      gui_app.push_widget(dlg)
+    else:
+      self._params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      self._params.put_bool("OnroadCycleRequested", True, block=True)
+      self._update_toggles()
 
   def _handle_experimental_mode_toggle(self, state: bool):
     confirmed = self._params.get_bool("ExperimentalModeConfirmed")
@@ -239,6 +273,10 @@ class TogglesLayout(Widget):
   def _toggle_callback(self, state: bool, param: str):
     if param == "ExperimentalMode":
       self._handle_experimental_mode_toggle(state)
+      return
+
+    if param == "AlphaLongitudinalEnabled":
+      self._handle_alpha_longitudinal_toggle(state)
       return
 
     self._params.put_bool(param, state, block=True)

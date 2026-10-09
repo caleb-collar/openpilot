@@ -37,11 +37,35 @@ class ExperimentalModeConfirmPage(NavScroller):
     ])
 
 
+class LongitudinalConfirmPage(NavScroller):
+  def __init__(self, on_confirm: Callable[[], None]):
+    super().__init__()
+
+    accept = BigConfirmationCircleButton("enable GaryPilot\nlongitudinal",
+                                         gui_app.texture("icons_mici/setup/driver_monitoring/dm_check.png", 64, 64),
+                                         lambda: self.dismiss(on_confirm))
+
+    self._scroller.add_widgets([
+      GreyBigButton("enabling longitudinal control", "scroll to continue",
+                    gui_app.texture("icons_mici/setup/warning.png", 64, 64)),
+      GreyBigButton("", "On platforms without separate AEB channels, native AEB may be disabled."),
+      GreyBigButton("", "On vehicles with isolated AEB architecture (such as Rivian R1 with XNOR XTREME hardware), factory Automatic Emergency Braking (AEB) remains fully active via direct ESP intervention."),
+      GreyBigButton("", "On this car, GaryPilot defaults to the vehicle's built-in ACC instead of GaryPilot's longitudinal control."),
+      GreyBigButton("", "Enabling this will switch to GaryPilot longitudinal control."),
+      GreyBigButton("", "Requires longitudinal upgrade hardware (such as XNOR XTREME)."),
+      GreyBigButton("", "Changing this setting will restart GaryPilot if the car is powered on."),
+      accept,
+    ])
+
+
 class TogglesLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
 
     self._personality_toggle = BigMultiParamToggle("driving personality", "LongitudinalPersonality", ["aggressive", "standard", "relaxed"])
+    self._alpha_long_toggle = BigToggle("GaryPilot longitudinal",
+                                        initial_state=ui_state.params.get_bool("AlphaLongitudinalEnabled"),
+                                        toggle_callback=self._on_alpha_long_enabled)
     self._experimental_btn = BigToggle("experimental mode", initial_state=ui_state.params.get_bool("ExperimentalMode"),
                                        toggle_callback=self._on_experimental_mode)
     is_metric_toggle = BigParamControl("use metric units", "IsMetric")
@@ -53,6 +77,7 @@ class TogglesLayoutMici(NavScroller):
 
     self._scroller.add_widgets([
       self._personality_toggle,
+      self._alpha_long_toggle,
       self._experimental_btn,
       is_metric_toggle,
       ldw_toggle,
@@ -64,6 +89,7 @@ class TogglesLayoutMici(NavScroller):
 
     # Toggle lists
     self._refresh_toggles = (
+      ("AlphaLongitudinalEnabled", self._alpha_long_toggle),
       ("ExperimentalMode", self._experimental_btn),
       ("IsMetric", is_metric_toggle),
       ("IsLdwEnabled", ldw_toggle),
@@ -73,6 +99,7 @@ class TogglesLayoutMici(NavScroller):
       ("OpenpilotEnabledToggle", enable_openpilot),
     )
 
+    self._alpha_long_toggle.set_enabled(lambda: not ui_state.engaged)
     enable_openpilot.set_enabled(lambda: not ui_state.engaged)
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
@@ -99,8 +126,13 @@ class TogglesLayoutMici(NavScroller):
   def _update_toggles(self):
     ui_state.update_params()
 
-    # CP gating for experimental mode
+    # CP gating for longitudinal and experimental mode
     if ui_state.CP is not None:
+      alpha_avail = ui_state.CP.alphaLongitudinalAvailable
+      self._alpha_long_toggle.set_visible(alpha_avail)
+      if not alpha_avail:
+        ui_state.params.remove("AlphaLongitudinalEnabled")
+
       if ui_state.has_longitudinal_control:
         self._experimental_btn.set_visible(True)
         self._personality_toggle.set_visible(True)
@@ -110,10 +142,25 @@ class TogglesLayoutMici(NavScroller):
         self._experimental_btn.set_checked(False)
         self._personality_toggle.set_visible(False)
         ui_state.params.remove("ExperimentalMode")
+    else:
+      self._alpha_long_toggle.set_visible(False)
 
     # Refresh toggles from params to mirror external changes
     for key, item in self._refresh_toggles:
       item.set_checked(ui_state.params.get_bool(key))
+
+  def _on_alpha_long_enabled(self, state: bool):
+    def do_toggle(_state: bool):
+      ui_state.params.put_bool("AlphaLongitudinalEnabled", _state, block=True)
+      restart_needed_callback()
+      self._update_toggles()
+
+    if state:
+      # Don't show enabled state until confirm
+      self._alpha_long_toggle.set_checked(False)
+      gui_app.push_widget(LongitudinalConfirmPage(lambda: do_toggle(True)))
+    else:
+      do_toggle(False)
 
   def _on_experimental_mode(self, state: bool):
     if state and not ui_state.params.get_bool("ExperimentalModeConfirmed"):
