@@ -36,7 +36,7 @@ fail() {
 
 [[ -n "$header" ]] || fail "empty message"
 [[ "$header" =~ $pattern ]] || fail "header must match <type>(<scope>)!: <description> (lowercase type/scope)"
-(( ${#header} <= 100 )) || fail "header is ${#header} chars (max 100)"
+(( ${#header} <= 120 )) || fail "header is ${#header} chars (max 120)"
 [[ "$header" != *. ]] || fail "header must not end with a period"
 
 # Body, if present, must be separated from the header by a blank line.

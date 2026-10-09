@@ -56,7 +56,7 @@ Run the full safety gate before pushing any change under `opendbc_repo/opendbc/s
 **Scopes** (lowercase): `rivian`, `safety`, `mads`, `panda`, `sync`, `docs`, `ci`, `tests`, `deps`, `tools` (`fork/` scripts).
 
 Rules (enforced by [`.githooks/commit-msg`](.githooks/commit-msg) and CI):
-* The header matches `type(scope)!: description`, is 100 characters or fewer, and does not end with a period.
+* The header matches `type(scope)!: description`, is 120 characters or fewer, and does not end with a period.
 * Put a blank line between the header and the body.
 * Mark breaking changes with `!` and/or a `BREAKING CHANGE:` footer.
 * Safety-relevant commits should reference the on-road route(s) used for validation in a `Route:` footer.
