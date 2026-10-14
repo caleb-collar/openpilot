@@ -154,8 +154,11 @@ class ExternalController:
   def _update_hands_on(self, CS):
     # hands-on if any of: capacitive sensor, EPAS-side level, or torsion bar
     driver_torque = self._update_driver_torque(CS)
-    calibration = CS.sccm_wheel_touch["SCCM_WheelTouch_Calibration"]
-    wheel_touch = self._update_wheel_touched(CS.sccm_wheel_touch["SCCM_WheelTouch_CapacitiveValue"] > calibration * 0.9, 25)
+    if CS.sccm_wheel_touch is not None:
+      calibration = CS.sccm_wheel_touch["SCCM_WheelTouch_Calibration"]
+      wheel_touch = self._update_wheel_touched(CS.sccm_wheel_touch["SCCM_WheelTouch_CapacitiveValue"] > calibration * 0.9, 25)
+    else:
+      wheel_touch = False
     torsion = self._update_torsion(driver_torque, 3.0, 9)
     presence = self._update_torsion_presence(driver_torque)
     self.hands_on = wheel_touch or torsion or CS.hands_on_level > 1

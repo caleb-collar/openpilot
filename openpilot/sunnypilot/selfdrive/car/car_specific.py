@@ -25,6 +25,7 @@ class CarSpecificEventsSP:
 
     self.low_speed_alert = False
     self._rivian_up2_active = False
+    self._rivian_up2_disable_pending = False
     self._rivian_prev_in_park = False
     self._rivian_park_disable_pending = False
     self._rivian_prev_in_reverse = False
@@ -60,11 +61,17 @@ class CarSpecificEventsSP:
 
     elif self.CP.brand == 'rivian':
       in_park = CS.gearShifter == GearShifter.park
+      up2_edge = False
       for be in CS.buttonEvents:
         if be.type == ButtonType.altButton2:
           self._rivian_up2_active = be.pressed
           if be.pressed:
             events_sp.add(EventNameSP.lkasDisable)
+            self._rivian_up2_disable_pending = True
+            up2_edge = True
+      if not up2_edge and self._rivian_up2_disable_pending:
+        events_sp.add(EventNameSP.lkasDisable)
+        self._rivian_up2_disable_pending = False
 
       if in_park and not self._rivian_prev_in_park:
         events_sp.add(EventNameSP.lkasDisable)
@@ -91,7 +98,16 @@ class CarSpecificEventsSP:
         events.remove(EventName.pcmEnable)
 
       from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake
-      if CS.brakePressed and self._rivian_steering_mode_on_brake == MadsSteeringModeOnBrake.PAUSE:
+      explicit_disable = (
+        events_sp.has(EventNameSP.lkasDisable) or
+        self._rivian_up2_active or
+        in_park or
+        in_reverse or
+        CS.steeringDisengage or
+        events.has(EventName.steerDisengage) or
+        any(be.pressed and be.type in (ButtonType.lkas, ButtonType.cancel, ButtonType.altButton2) for be in CS.buttonEvents)
+      )
+      if CS.brakePressed and self._rivian_steering_mode_on_brake == MadsSteeringModeOnBrake.PAUSE and not explicit_disable:
         events_sp.add(EventNameSP.silentLkasDisable)
 
     return events_sp

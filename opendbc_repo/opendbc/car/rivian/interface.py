@@ -19,11 +19,11 @@ class CarInterface(CarInterfaceBase):
     ret.safetyConfigs = [get_safety_config(structs.CarParams.SafetyModel.rivian)]
 
     # GEN2 (2025+) doesn't have SCCM_WheelTouch on the bus
-    if 0x321 not in fingerprint[0]:
+    if 0x321 not in fingerprint.get(0, {}):
       ret.flags |= RivianFlags.GEN2.value
 
     # no angle upgrade installed
-    if 0x1310 not in fingerprint[1]:
+    if 0x1310 not in fingerprint.get(1, {}):
       ret.dashcamOnly = True
 
     ret.steerActuatorDelay = 0.1
