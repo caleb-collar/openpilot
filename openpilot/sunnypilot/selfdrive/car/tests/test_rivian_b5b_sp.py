@@ -174,3 +174,68 @@ class TestRivianDriverOverrideDisengage(OpenpilotTestCase):
     assert mads.state_machine.state == State.disabled
     assert not mads.enabled
 
+  def test_pause_mode_brake_plus_explicit_disable_ends_disabled_not_paused(self, monkeypatch, mocker):
+    # Regression test: in PAUSE mode while holding the brake pedal, any explicit disable
+    # (UP_2, Reverse/Park gear shift, or steerDisengage) must NOT be shadowed by silentLkasDisable
+    # into State.paused (which would uncommandedly re-engage lateral steering on brake release).
+    monkeypatch.setattr(params_module, "Params", lambda: _FakeParams(PAUSE))
+
+    # 1. UP_2 while braking in PAUSE mode -> emits lkasDisable (for 2 frames), NOT silentLkasDisable
+    ev = CarSpecificEventsSP(_rivian_cp(), structs.CarParamsSP())
+    cs_up2 = structs.CarState.new_message()
+    cs_up2.gearShifter = structs.CarState.GearShifter.drive
+    cs_up2.brakePressed = True
+    cs_up2.buttonEvents = [structs.CarState.ButtonEvent(pressed=True, type=ButtonType.altButton2)]
+    events_f1 = ev.update(cs_up2, Events())
+    assert events_f1.has(EventNameSP.lkasDisable)
+    assert not events_f1.has(EventNameSP.silentLkasDisable)
+
+    # Frame 2 (held at UP_2): two-frame lkasDisable ensures transition out of paused completes
+    cs_up2_held = structs.CarState.new_message()
+    cs_up2_held.gearShifter = structs.CarState.GearShifter.drive
+    cs_up2_held.brakePressed = True
+    events_f2 = ev.update(cs_up2_held, Events())
+    assert events_f2.has(EventNameSP.lkasDisable)
+    assert not events_f2.has(EventNameSP.silentLkasDisable)
+
+    # 2. Shifting to Reverse while holding brake in PAUSE mode -> emits lkasDisable, NOT silentLkasDisable
+    ev_gear = CarSpecificEventsSP(_rivian_cp(), structs.CarParamsSP())
+    cs_drive = structs.CarState.new_message()
+    cs_drive.gearShifter = structs.CarState.GearShifter.drive
+    cs_drive.brakePressed = True
+    ev_gear.update(cs_drive, Events())
+
+    cs_rev = structs.CarState.new_message()
+    cs_rev.gearShifter = structs.CarState.GearShifter.reverse
+    cs_rev.brakePressed = True
+    events_rev1 = ev_gear.update(cs_rev, Events())
+    events_rev2 = ev_gear.update(cs_rev, Events())
+    assert events_rev1.has(EventNameSP.lkasDisable)
+    assert not events_rev1.has(EventNameSP.silentLkasDisable)
+    assert events_rev2.has(EventNameSP.lkasDisable)
+    assert not events_rev2.has(EventNameSP.silentLkasDisable)
+
+    # 3. Verify full MADS state machine transitions from paused -> disabled and stays disabled on brake release
+    mads, sd = _make_rivian_mads(mocker, PAUSE)
+    # First pause via brake
+    cs_brake = structs.CarState()
+    cs_brake.cruiseState.available = True
+    cs_brake.brakePressed = True
+    sd.events_sp.add(EventNameSP.silentLkasDisable)
+    run_frames(mads, sd, cs_brake)
+    assert mads.state_machine.state == State.paused
+
+    # Now explicit disable (e.g., UP_2 / Reverse / steerDisengage) while brake is still held
+    sd.events_sp.clear()
+    sd.events_sp.add(EventNameSP.lkasDisable)
+    run_frames(mads, sd, cs_brake, n=2)
+    assert mads.state_machine.state == State.disabled
+
+    # Release brake: MADS must remain disabled (never auto-resume)
+    sd.events_sp.clear()
+    cs_release = structs.CarState()
+    cs_release.cruiseState.available = True
+    cs_release.brakePressed = False
+    run_frames(mads, sd, cs_release, n=2)
+    assert mads.state_machine.state == State.disabled
+    assert not mads.enabled

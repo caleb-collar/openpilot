@@ -248,7 +248,9 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     assert "AlphaLongitudinalEnabled" not in rivian_keys
 
   def test_rivian_stalk_up1_action_decoding(self):
-    """Verify CarStateExt decodes UP_1 according to RivianStalkUp1Action (0=lkas, 1=cancel, 2=disengage all)."""
+    """Verify CarStateExt decodes UP_1 according to RivianStalkUp1Action when ACC is engaged,
+    and always emits ButtonType.lkas when ACC is off (Mode B MADS toggle + Panda sync).
+    """
     from types import SimpleNamespace
     from opendbc.car import Bus, structs
     from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
@@ -259,42 +261,60 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     CP_SP = structs.CarParamsSP()
 
     class FakeParams:
-      def __init__(self, action):
-        self.action = str(action)
+      def __init__(self, action, steering_mode=0):
+        self.action = action
+        self.steering_mode = steering_mode
       def get(self, key, block=False, return_default=False):
         if key == "RivianStalkUp1Action":
           return self.action
+        if key == "MadsSteeringMode":
+          return self.steering_mode
         return None
       def get_bool(self, key, block=False):
         return False
+
+    cp = SimpleNamespace(vl={"VDM_AdasSts": {"VDM_UserAdasRequest": 1}})
+
+    # 1. With ACC engaged (cruiseState.enabled = True):
+    ret_on = structs.CarState()
+    ret_on.cruiseState.enabled = True
 
     # Action 0: MADS Toggle -> ButtonType.lkas
     ext0 = CarStateExt(CP, CP_SP)
     ext0.params = FakeParams(0)
     ext0._refresh_params()
-    ret = structs.CarState()
-    cp = SimpleNamespace(vl={"VDM_AdasSts": {"VDM_UserAdasRequest": 1}})
-    ext0.update_stalk_controls(ret, {Bus.pt: cp})
-    evs = ext0.update_stalk_controls(ret, {Bus.pt: cp})
+    ext0.update_stalk_controls(ret_on, {Bus.pt: cp})
+    evs = ext0.update_stalk_controls(ret_on, {Bus.pt: cp})
     assert any(be.type == ButtonType.lkas and be.pressed for be in evs)
 
     # Action 1: Cancel ACC -> ButtonType.cancel
     ext1 = CarStateExt(CP, CP_SP)
     ext1.params = FakeParams(1)
     ext1._refresh_params()
-    ext1.update_stalk_controls(ret, {Bus.pt: cp})
-    evs = ext1.update_stalk_controls(ret, {Bus.pt: cp})
+    ext1.update_stalk_controls(ret_on, {Bus.pt: cp})
+    evs = ext1.update_stalk_controls(ret_on, {Bus.pt: cp})
     assert any(be.type == ButtonType.cancel and be.pressed for be in evs)
     assert not any(be.type == ButtonType.lkas for be in evs)
 
-    # Action 2: Disengage All -> ButtonType.cancel + ButtonType.altButton2
+    # Action 2: Disengage All -> ButtonType.cancel + ButtonType.altButton2 (even in DISENGAGE steering mode 2)
     ext2 = CarStateExt(CP, CP_SP)
-    ext2.params = FakeParams(2)
+    ext2.params = FakeParams(2, steering_mode=2)
     ext2._refresh_params()
-    ext2.update_stalk_controls(ret, {Bus.pt: cp})
-    evs = ext2.update_stalk_controls(ret, {Bus.pt: cp})
+    ext2.update_stalk_controls(ret_on, {Bus.pt: cp})
+    evs = ext2.update_stalk_controls(ret_on, {Bus.pt: cp})
     assert any(be.type == ButtonType.cancel and be.pressed for be in evs)
     assert any(be.type == ButtonType.altButton2 and be.pressed for be in evs)
+
+    # 2. With ACC off (cruiseState.enabled = False): UP_1 must always emit ButtonType.lkas (Mode B MADS toggle)
+    ret_off = structs.CarState()
+    ret_off.cruiseState.enabled = False
+    for action in (0, 1, 2):
+      ext_off = CarStateExt(CP, CP_SP)
+      ext_off.params = FakeParams(action)
+      ext_off._refresh_params()
+      ext_off.update_stalk_controls(ret_off, {Bus.pt: cp})
+      evs_off = ext_off.update_stalk_controls(ret_off, {Bus.pt: cp})
+      assert [(be.type, be.pressed) for be in evs_off] == [(ButtonType.lkas, True)]
 
   def test_rivian_speed_click_step_delta(self):
     """Verify CarStateExt applies 1 mph vs 5 mph click delta based on RivianSpeedClickStep."""
@@ -312,7 +332,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
 
     class FakeParams:
       def __init__(self, step):
-        self.step = str(step)
+        self.step = step
       def get(self, key, block=False, return_default=False):
         if key == "RivianSpeedClickStep":
           return self.step
@@ -320,7 +340,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
       def get_bool(self, key, block=False):
         return False
 
-    # Step 0 (1 mph step)
+    # Step 0 (1 mph step, returned as integer 0 just like Params.get on ParamKeyType.INT)
     ext0 = CarStateExt(CP, CP_SP)
     ext0.params = FakeParams(0)
     ext0._refresh_params()
@@ -356,7 +376,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
 
     class FakeParams:
       def __init__(self, sens):
-        self.sens = str(sens)
+        self.sens = sens  # Return raw int (or str) to verify int(0) falsy-bug regression fix
       def get(self, key, block=False, return_default=False):
         if key == "RivianSteerOverrideSensitivity":
           return self.sens
@@ -364,10 +384,11 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
       def get_bool(self, key, block=False):
         return False
 
-    # Light (0)
+    # Light (int 0) - must NOT fall back to 1
     ext_light = CarStateExt(CP, CP_SP)
     ext_light.params = FakeParams(0)
     ext_light._refresh_params()
+    assert ext_light.steer_override_sensitivity == 0
     assert ext_light.steer_driver_allowance == 75
     assert ext_light.steer_driver_pressed_threshold == 0.75
 
@@ -375,6 +396,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     ext_std = CarStateExt(CP, CP_SP)
     ext_std.params = FakeParams(1)
     ext_std._refresh_params()
+    assert ext_std.steer_override_sensitivity == 1
     assert ext_std.steer_driver_allowance == 100
     assert ext_std.steer_driver_pressed_threshold == 1.00
 
@@ -382,16 +404,20 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     ext_firm = CarStateExt(CP, CP_SP)
     ext_firm.params = FakeParams(2)
     ext_firm._refresh_params()
+    assert ext_firm.steer_override_sensitivity == 2
     assert ext_firm.steer_driver_allowance == 100  # Capped at Panda safety limit of 100
-    assert ext_firm.steer_driver_pressed_threshold == 1.30
+    assert ext_firm.steer_driver_pressed_threshold == 1.00
 
     # Verify ExternalController uses CS.steer_driver_allowance and clamps to Panda safety limit (100)
     class MockCS:
-      def __init__(self, allowance):
+      def __init__(self, allowance, sccm_wheel_touch=None):
         self.out = structs.CarState()
         self.out.vEgoRaw = 20.0
         self.out.steeringTorque = 50.0
+        self.out.steeringAngleDeg = 0.0
         self.steer_driver_allowance = allowance
+        self.sccm_wheel_touch = sccm_wheel_touch
+        self.hands_on_level = 0
 
     erc = ExternalController()
     cs_mock = MockCS(75)
@@ -400,6 +426,10 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
     actuators.torque = 0.5
     erc._update_torque(cs_mock, actuators)
     assert erc.ccp.STEER_DRIVER_ALLOWANCE == 75
+
+    # Verify Gen 2 Rivians (sccm_wheel_touch is None) do not crash in _update_hands_on
+    erc._update_hands_on(cs_mock)
+    assert isinstance(erc.hands_on, bool)
 
     # If CS reports higher than Panda limit, verify it clamps to 100
     cs_firm = MockCS(130)
@@ -423,6 +453,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
         self.vl = {"VDM_AdasSts": {"VDM_UserAdasRequest": val}}
 
     ret = structs.CarState.new_message()
+    ret.cruiseState.enabled = True
 
     # Frame 1: Stalk hits UP_1 detent (vdm = 1)
     parsers_1 = {"pt": MockParser(1)}
@@ -471,6 +502,7 @@ class TestGaryPilotRivianSettings(OpenpilotTestCase):
         self.vl = {"VDM_AdasSts": {"VDM_UserAdasRequest": val}}
 
     ret = structs.CarState.new_message()
+    ret.cruiseState.enabled = True
 
     # Frame 1: vdm = 1
     ext.update_stalk_controls(ret, {"pt": MockParser(1)})

@@ -12,6 +12,21 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
 
 ## [Unreleased]
 
+### Fixed
+
+- **PAUSE Mode Explicit Disengage Safety (`car_specific.py`)**: Gated `EventNameSP.silentLkasDisable` on `not explicit_disable` when `MadsSteeringModeOnBrake.PAUSE` is selected so holding the brake pedal while shifting to Reverse/Park, pushing the stalk to `UP_2`, tapping `UP_1`, or overriding the steering wheel (`steerDisengage`) transitions MADS cleanly to `State.disabled` rather than trapping it in `State.paused` and re-engaging lateral steering on brake release. Added two-frame `lkasDisable` on `UP_2` (`altButton2`) entry to match gear-shift transitions out of `State.paused`.
+- **Gen 2 Rivian `ExternalController` Null-Safety (`ext_controller.py`)**: Guarded `CS.sccm_wheel_touch` against `None` in `ExternalController._update_hands_on()` for Gen 2 Rivians (2025+, which lack `0x321 SCCM_WheelTouch` on CAN bus 0).
+- **Stalk `UP_1` Mode B Synchronization & `DISENGAGE` Mode (`carstate_ext.py`)**:
+  - Preserved `ButtonType.lkas` MADS toggling on `UP_1` whenever ACC is not engaged (`not ret.cruiseState.enabled`) across all `RivianStalkUp1Action` modes, keeping Python MADS state 100% synchronized with Panda safety (`!cruise_engaged_prev` in `rivian.h`) and preserving Mode B standalone lateral engagement.
+  - Restricted `steering_mode_on_brake == 2` (`DISENGAGE`) `UP_1` suppression to `stalk_up1_action == 0` so Action `2` (*Disengage All*) and Action `1` (*Cancel ACC*) execute as configured across all steering modes.
+  - Iterated over `cp.vl_all["VDM_AdasSts"]["VDM_UserAdasRequest"]` so 100 Hz `card.py` ticks without a new 50 Hz `0x162` CAN frame do not prematurely resolve the `UP_2` lookahead, and tracked `_up1_pressed_types` on press.
+- **Driver Override Sensitivity & Integer `0` Param Parsing (`carstate_ext.py`)**:
+  - Replaced `int(self.params.get(...) or default)` with explicit `_parse_int_param()` so `Params.get()` returning Python `int` `0` no longer evaluates as falsy and falls back to `"1"` (restoring Light sensitivity `0` in production).
+  - Set Firm (`2`) `steer_driver_pressed_threshold` to `1.00` Nm (matching Standard) so cooperative torque handoff triggers before Rivian EPAS latches `EPAS_Hands_On_Detn_Err` (error code 12).
+- **Real-Time Loop & Hardware Telemetry (`card.py`, `helpers.py`, `carstate_ext.py`)**: Moved periodic `CarStateExt._refresh_params()` calls onto `card.py`'s background `params_thread` and added `update_rivian_harness_status()` on `card.py` startup so `RivianHarnessStatus` is always populated on Comma 4 (`mici`) and headless sessions.
+- **2026 Model Year & Safe Fingerprinting (`values.py`, `interface.py`)**: Added `ModelYear.T_2026` to `CAR.RIVIAN_R1.config.years` and replaced raw `fingerprint[0]`/`fingerprint[1]` indexing with `.get()`.
+- **Virtual Params & UI Polish (`params.py`, `list_view.py`, `brands/rivian.py`, `onboarding.py`)**: Added `ParamKeyFlag.BACKUP` to user-configurable Rivian virtual params, fixed `MultipleButtonActionSP` mouse release outside button bounds, synced `RivianSettings` button states and longitudinal enablement gating, and fixed `VehicleVerificationPage` description Y-offset on Comma 3X (`tici`).
+
 ## [0.3.0] - 2026-10-09
 
 ### Added
@@ -22,7 +37,7 @@ Fork versions are tagged `r1-vX.Y.Z` and are independent of the upstream sunnypi
     - `RivianStalkUp1Action`: Configurable gear stalk UP_1 tap behavior allowing drivers to choose between *MADS Toggle* (default), *Cancel ACC* (matches factory Rivian behavior), or *Disengage All* (simultaneous lateral and longitudinal disengagement).
     - `RivianSpeedClickStep`: Configurable right steering wheel thumbpad click set-speed increment ($\pm 1\text{ mph / km/h}$ vs. $\pm 5\text{ mph / km/h}$).
   - **Driver Override Sensitivity Tuning**:
-    - `RivianSteerOverrideSensitivity`: Configurable driver steering resistance profile (*Light*: 75 torque allowance / 0.75 Nm threshold; *Standard*: 100 torque allowance / 1.00 Nm threshold; *Firm*: 130 torque allowance / 1.30 Nm threshold), allowing drivers to customize how easily openpilot yields to manual steering intervention.
+    - `RivianSteerOverrideSensitivity`: Configurable driver steering resistance profile (*Light*: 75 torque allowance / 0.75 Nm threshold; *Standard*: 100 torque allowance / 1.00 Nm threshold; *Firm*: 100 torque allowance / 1.00 Nm threshold), allowing drivers to customize how easily openpilot yields to manual steering intervention.
   - Implemented across on-device Raylib UI (`brands/rivian.py`) and Sunnylink schema (`pages/vehicle.yaml` / `settings_ui.json`) with safe non-engaged gating.
   - Strictly excluded longitudinal control from the Vehicle tab (Option 4 excluded; longitudinal control toggle resides exclusively in the primary **Toggles** tab).
 - **Speed-Dependent Low-Speed Steering Authority**:
