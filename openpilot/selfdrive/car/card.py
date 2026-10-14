@@ -20,7 +20,7 @@ from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseHelper
-from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp, enforce_vehicle_safety_gate
+from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp, enforce_vehicle_safety_gate, update_rivian_harness_status
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
 from openpilot.sunnypilot.selfdrive.car import interfaces as sunnypilot_interfaces
@@ -172,6 +172,7 @@ class Car:
     self.params.put("CarParamsSP", cp_sp_bytes, block=True)
     self.params.put("CarParamsSPCache", cp_sp_bytes)
     self.params.put("CarParamsSPPersistent", cp_sp_bytes)
+    update_rivian_harness_status(self.CP, self.params)
 
     self.v_cruise_helper = VCruiseHelper(self.CP, self.CP_SP)
 
@@ -302,6 +303,8 @@ class Car:
       # sunnypilot
       self.dynamic_experimental_control = self.params.get_bool("DynamicExperimentalControl")
       self.v_cruise_helper.read_custom_set_speed_params()
+      if hasattr(self.CI, "CS") and hasattr(self.CI.CS, "_refresh_params"):
+        self.CI.CS._refresh_params()
 
       time.sleep(0.1)
 

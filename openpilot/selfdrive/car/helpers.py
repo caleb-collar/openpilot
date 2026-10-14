@@ -91,3 +91,20 @@ def enforce_vehicle_safety_gate(CP, CI_CC, openpilot_enabled_toggle: bool) -> bo
 
   return controller_available
 
+
+def update_rivian_harness_status(CP, params) -> None:
+  """Write Rivian hardware diagnostic summary to Params on startup so Sunnylink
+  and headless/Comma 4 (mici) sessions always have up-to-date telemetry even if
+  the tici Vehicle Settings panel is never opened.
+  """
+  if CP.brand != "rivian" or CP.carFingerprint == "MOCK":
+    return
+
+  from opendbc.car.rivian.values import RivianFlags
+  is_gen2 = bool(CP.flags & RivianFlags.GEN2)
+  angle_ok = not CP.dashcamOnly
+  long_ok = bool(CP.alphaLongitudinalAvailable)
+  radar_ok = not CP.radarUnavailable
+  gen_str = "Gen 2" if is_gen2 else "Gen 1"
+  summary = f"Angle: {'OK' if angle_ok else 'None'} | Long: {'OK' if long_ok else 'None'} | {gen_str} | Radar: {'32 Tracks' if radar_ok else 'None'}"
+  params.put("RivianHarnessStatus", summary)

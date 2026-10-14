@@ -5,6 +5,7 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 import math
+import time
 from enum import StrEnum
 
 from opendbc.car import Bus, structs
@@ -32,10 +33,14 @@ class CarStateExt:
 
     self.vdm_user_adas_request = 0
     self._lkas_pending = False
+    self._lkas_pending_cruise_enabled = False
     self._up1_pressed = False
+    self._up1_pressed_types: list = []
     self.frame = 0
+    self._last_param_refresh = 0.0
     self.stalk_up1_action = 0
     self.speed_click_step = 0
+    self.steer_override_sensitivity = 1
     self.steer_driver_allowance = 100
     self.steer_driver_pressed_threshold = 1.0
 
@@ -49,80 +54,110 @@ class CarStateExt:
     self.steering_mode_on_brake = read_steering_mode_param(CP, CP_SP, self.params)
     self._refresh_params()
 
+  @staticmethod
+  def _parse_int_param(val, default: int) -> int:
+    if val in (None, "", b""):
+      return default
+    try:
+      return int(val)
+    except Exception:
+      return default
+
   def _refresh_params(self):
+    self._last_param_refresh = time.monotonic()
     if self.params is None:
       return
     try:
-      self.stalk_up1_action = int(self.params.get("RivianStalkUp1Action") or "0")
+      self.stalk_up1_action = self._parse_int_param(self.params.get("RivianStalkUp1Action"), 0)
     except Exception:
       self.stalk_up1_action = 0
 
     try:
-      self.speed_click_step = int(self.params.get("RivianSpeedClickStep") or "0")
+      self.speed_click_step = self._parse_int_param(self.params.get("RivianSpeedClickStep"), 0)
     except Exception:
       self.speed_click_step = 0
 
     try:
-      sensitivity = int(self.params.get("RivianSteerOverrideSensitivity") or "1")
+      sensitivity = self._parse_int_param(self.params.get("RivianSteerOverrideSensitivity"), 1)
     except Exception:
       sensitivity = 1
+    self.steer_override_sensitivity = sensitivity
 
     if sensitivity == 0:
       self.steer_driver_allowance = 75
       self.steer_driver_pressed_threshold = 0.75
     elif sensitivity == 2:
-      # Driver torque allowance cannot exceed panda safety limit (100 in rivian.h)
+      # Driver torque allowance cannot exceed panda safety limit (100 in rivian.h);
+      # keep pressed threshold at 1.00 Nm so angle-to-torque handoff occurs before EPAS error 12.
       self.steer_driver_allowance = 100
-      self.steer_driver_pressed_threshold = 1.30
+      self.steer_driver_pressed_threshold = 1.00
     else:
       self.steer_driver_allowance = 100
       self.steer_driver_pressed_threshold = 1.00
 
-  def _emit_up1_event(self, pressed: bool) -> list:
-    events = []
+  def _resolve_up1_event_types(self, cruise_enabled: bool = True) -> list:
+    # When ACC is not engaged, UP_1 always toggles MADS lateral (ButtonType.lkas)
+    # so Mode B stays functional and 100% synchronized with Panda safety (!cruise_engaged_prev).
+    if not cruise_enabled:
+      return [ButtonType.lkas]
     if self.stalk_up1_action == 1:
-      # Cancel ACC / longitudinal
-      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.cancel))
-    elif self.stalk_up1_action == 2:
+      # Cancel ACC / longitudinal while keeping MADS lateral active
+      return [ButtonType.cancel]
+    if self.stalk_up1_action == 2:
       # Disengage All (both lateral and longitudinal)
-      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.cancel))
-      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.altButton2))
-    else:
-      # MADS Toggle (Default)
-      events.append(structs.CarState.ButtonEvent(pressed=pressed, type=ButtonType.lkas))
-    return events
+      return [ButtonType.cancel, ButtonType.altButton2]
+    # MADS Toggle (Default)
+    return [ButtonType.lkas]
+
+  def _emit_up1_event(self, pressed: bool, cruise_enabled: bool = True) -> list:
+    return [structs.CarState.ButtonEvent(pressed=pressed, type=t) for t in self._resolve_up1_event_types(cruise_enabled)]
 
   def update_stalk_controls(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
     cp = can_parsers[Bus.pt]
-    vdm = int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"])
+    if hasattr(cp, "vl_all") and "VDM_AdasSts" in cp.vl_all:
+      vdm_samples = [int(v) for v in cp.vl_all["VDM_AdasSts"]["VDM_UserAdasRequest"]]
+    else:
+      vdm_samples = [int(cp.vl["VDM_AdasSts"]["VDM_UserAdasRequest"])]
 
     button_events = []
 
-    # Signal UP_2 state via altButton2 so car_specific.py can fire lkasDisable
-    # and suppress pcmEnable. UP_2 disengages ACC; without this, MADS can persist
-    # in Mode B (lateral only) after ACC cancels.
-    if vdm == 2 and self.vdm_user_adas_request != 2:
-      button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.altButton2))
-    elif vdm != 2 and self.vdm_user_adas_request == 2:
-      button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.altButton2))
+    for vdm in vdm_samples:
+      # Signal UP_2 state via altButton2 so car_specific.py can fire lkasDisable
+      # and suppress pcmEnable. UP_2 disengages ACC; without this, MADS can persist
+      # in Mode B (lateral only) after ACC cancels.
+      if vdm == 2 and self.vdm_user_adas_request != 2:
+        button_events.append(structs.CarState.ButtonEvent(pressed=True, type=ButtonType.altButton2))
+      elif vdm != 2 and self.vdm_user_adas_request == 2:
+        button_events.append(structs.CarState.ButtonEvent(pressed=False, type=ButtonType.altButton2))
 
-    # Signal UP_1 state via configured action (lkas / cancel / disengage all)
-    # 1-frame lookahead to prevent UP_1 flashing during sweep to UP_2
-    if self._lkas_pending:
-      if vdm != 2:
-        button_events.extend(self._emit_up1_event(True))
-        self._up1_pressed = True
-      self._lkas_pending = False
+      # Signal UP_1 state via configured action (lkas / cancel / disengage all)
+      # 1-frame lookahead to prevent UP_1 flashing during sweep to UP_2
+      if self._lkas_pending:
+        if vdm != 2:
+          types = self._resolve_up1_event_types(self._lkas_pending_cruise_enabled)
+          for t in types:
+            button_events.append(structs.CarState.ButtonEvent(pressed=True, type=t))
+          self._up1_pressed = True
+          self._up1_pressed_types = types
+        self._lkas_pending = False
 
-    if vdm == 1 and self.vdm_user_adas_request not in (1, 2):
-      # DISENGAGE mode (value 2).
-      if not (self.steering_mode_on_brake == 2 and ret.cruiseState.enabled):
-        self._lkas_pending = True
-    elif vdm != 1 and self._up1_pressed:
-      button_events.extend(self._emit_up1_event(False))
-      self._up1_pressed = False
+      if vdm == 1 and self.vdm_user_adas_request not in (1, 2):
+        # In default MADS Toggle mode (0), DISENGAGE steering mode (2) with ACC on
+        # suppresses UP_1 so stock ACC cancels natively while MADS stays active.
+        if not (self.stalk_up1_action == 0 and self.steering_mode_on_brake == 2 and ret.cruiseState.enabled):
+          self._lkas_pending = True
+          self._lkas_pending_cruise_enabled = bool(ret.cruiseState.enabled)
+      elif vdm != 1 and self._up1_pressed:
+        for t in self._up1_pressed_types:
+          # Do not clobber altButton2(pressed=True) if transitioning directly from UP_1 into UP_2
+          if vdm == 2 and t == ButtonType.altButton2:
+            continue
+          button_events.append(structs.CarState.ButtonEvent(pressed=False, type=t))
+        self._up1_pressed = False
+        self._up1_pressed_types = []
 
-    self.vdm_user_adas_request = vdm
+      self.vdm_user_adas_request = vdm
+
     return button_events
 
   def update_longitudinal_upgrade(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> list:
@@ -188,7 +223,7 @@ class CarStateExt:
 
   def update(self, ret: structs.CarState, can_parsers: dict[StrEnum, CANParser]) -> None:
     self.frame += 1
-    if self.frame % 100 == 0:
+    if self.frame % 100 == 0 and (time.monotonic() - self._last_param_refresh) >= 1.0:
       self._refresh_params()
 
     button_events = []
