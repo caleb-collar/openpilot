@@ -38,22 +38,24 @@ class ParamKeyType(IntEnum):
 # without requiring modification of prebuilt aarch64 binary schemas (params_keys.h).
 VIRTUAL_PARAMS: dict[bytes, tuple[ParamKeyType, ParamKeyFlag, bytes]] = {
   b"RivianHarnessStatus": (ParamKeyType.STRING, ParamKeyFlag.PERSISTENT, b"Standby"),
-  b"RivianStalkUp1Action": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"0"),
-  b"RivianSpeedClickStep": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"0"),
-  b"RivianSteerOverrideSensitivity": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT, b"1"),
+  b"RivianStalkUp1Action": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
+  b"RivianSpeedClickStep": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"0"),
+  b"RivianSteerOverrideSensitivity": (ParamKeyType.INT, ParamKeyFlag.PERSISTENT | ParamKeyFlag.BACKUP, b"1"),
 }
 
 # In-memory virtual param cache mapping (param_path, key_bytes) -> (mtime_ns, bytes_val | None, check_time)
 _virtual_cache: dict[tuple[str, bytes], tuple[int, bytes | None, float]] = {}
 
 _HEADER_KEYS: list[bytes] | None = None
+_HEADER_META: dict[bytes, tuple[ParamKeyType, bytes | None]] | None = None
 
 
-def _load_header_keys() -> list[bytes]:
-  global _HEADER_KEYS
-  if _HEADER_KEYS is not None:
-    return _HEADER_KEYS
+def _load_header_meta() -> dict[bytes, tuple[ParamKeyType, bytes | None]]:
+  global _HEADER_KEYS, _HEADER_META
+  if _HEADER_META is not None:
+    return _HEADER_META
   keys: list[bytes] = []
+  meta: dict[bytes, tuple[ParamKeyType, bytes | None]] = {}
   header_path = Path(__file__).parent / "params_keys.h"
   if header_path.exists():
     try:
@@ -62,11 +64,29 @@ def _load_header_keys() -> list[bytes]:
           line = line.strip()
           if line.startswith('{"') and '",' in line:
             key_name = line.split('"', 2)[1]
-            keys.append(key_name.encode("utf-8"))
+            key_bytes = key_name.encode("utf-8")
+            keys.append(key_bytes)
+            inner = line.split("{", 2)[-1].rsplit("}", 2)[0]
+            parts = [p.strip() for p in inner.split(",")]
+            ptype = ParamKeyType.STRING
+            if len(parts) >= 2 and hasattr(ParamKeyType, parts[1]):
+              ptype = getattr(ParamKeyType, parts[1])
+            dval: bytes | None = None
+            if len(parts) >= 3:
+              raw_def = parts[2]
+              if raw_def.startswith('"') and raw_def.endswith('"'):
+                dval = raw_def[1:-1].encode("utf-8")
+            meta[key_bytes] = (ptype, dval)
     except Exception:
       pass
   _HEADER_KEYS = keys
-  return _HEADER_KEYS
+  _HEADER_META = meta
+  return _HEADER_META
+
+
+def _load_header_keys() -> list[bytes]:
+  _load_header_meta()
+  return _HEADER_KEYS or []
 
 
 _suffix = ".dylib" if sys.platform == "darwin" else ".so"
@@ -221,7 +241,7 @@ class Params:
     if k in VIRTUAL_PARAMS:
       return VIRTUAL_PARAMS[k][2]
     if lib is None:
-      return None
+      return _load_header_meta().get(k, (ParamKeyType.STRING, None))[1]
     return _copy_string(params_get_default(self.p, key))
 
   def get(self, key, block=False, return_default=False):
@@ -236,7 +256,7 @@ class Params:
         if cached is not None:
           mtime_ns, val, cache_time = cached
           if now - cache_time < 0.5:
-            if val is not None:
+            if val:
               return self._cpp2python(t, val, default, key)
             elif not block:
               return self._cpp2python(t, default, None, key)
@@ -266,7 +286,7 @@ class Params:
         except Exception:
           value = default
 
-        if value is not None or not block:
+        if value or not block:
           break
         time.sleep(0.1)
 
@@ -292,6 +312,9 @@ class Params:
     if k in VIRTUAL_PARAMS:
       val = self.get(k, block)
       return bool(val) if val is not None else (VIRTUAL_PARAMS[k][2] == b"1")
+    if lib is None:
+      val = self.get(k, block)
+      return bool(val) if val is not None else (_default_b := self._default(k)) == b"1"
     return bool(params_get_bool(self.p, self.check_key(key), block))
 
   def _put_cast(self, key, dat):
@@ -340,11 +363,16 @@ class Params:
           except Exception:
             pass
       return
+    if lib is None:
+      p = Path(self.get_param_path())
+      p.mkdir(parents=True, exist_ok=True)
+      (p / k.decode()).write_bytes(value)
+      return
     params_put(self.p, k, value, len(value), block)
 
   def put_bool(self, key, val, block=False):
     k = self.check_key(key)
-    if k in VIRTUAL_PARAMS:
+    if k in VIRTUAL_PARAMS or lib is None:
       self.put(k, bool(val), block)
       return
     params_put_bool(self.p, self.check_key(key), val, block)
@@ -359,13 +387,20 @@ class Params:
         pass
       _virtual_cache.pop((self.get_param_path(), k), None)
       return
+    if lib is None:
+      try:
+        (Path(self.get_param_path()) / k.decode()).unlink(missing_ok=True)
+      except Exception:
+        pass
+      return
     params_remove(self.p, self.check_key(key))
 
   def get_param_path(self, key=""):
     key = ensure_bytes(key)
     res = _copy_string(params_get_path(self.p, key, len(key)))
     if not res:
-      return os.environ.get("PARAMS_PATH", "/data/params/d")
+      base = (self.d.decode() if isinstance(self.d, bytes) else str(self.d)) if self.d else os.environ.get("PARAMS_PATH", "/data/params/d")
+      return f"{base}/{key.decode()}" if key else base
     return res.decode()
 
   def get_type(self, key):
@@ -373,7 +408,7 @@ class Params:
     if k in VIRTUAL_PARAMS:
       return VIRTUAL_PARAMS[k][0]
     if lib is None:
-      return ParamKeyType.STRING
+      return _load_header_meta().get(k, (ParamKeyType.STRING, None))[0]
     return ParamKeyType(params_get_key_type(self.p, self.check_key(key)))
 
   def all_keys(self, flag=ParamKeyFlag.ALL):

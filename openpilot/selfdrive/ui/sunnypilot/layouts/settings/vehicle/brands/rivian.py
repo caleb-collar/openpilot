@@ -55,10 +55,9 @@ class RivianSettings(BrandSettings):
     stalk_texts = [tr("MADS Toggle"), tr("Cancel ACC"), tr("Disengage All")]
     self.stalk_up1_item = multiple_button_item_sp(
       tr("Stalk UP_1 Tap Action"),
-      tr("Configure the action when flicking the gear stalk up to UP_1: toggle MADS lateral steering, cancel factory ACC/longitudinal, or disengage both."),
+      tr("Configure the action when flicking the gear stalk up to UP_1 while ACC is engaged: toggle MADS lateral steering, cancel ACC/longitudinal, or disengage both."),  # noqa: E501
       stalk_texts,
       button_width=250,
-      callback=self._on_stalk_up1_selected,
       param="RivianStalkUp1Action",
       inline=False,
     )
@@ -69,7 +68,6 @@ class RivianSettings(BrandSettings):
       tr("Configure the set speed increment when clicking the right steering wheel thumbpad left/right."),
       speed_step_texts,
       button_width=250,
-      callback=self._on_speed_step_selected,
       param="RivianSpeedClickStep",
       inline=False,
     )
@@ -80,7 +78,6 @@ class RivianSettings(BrandSettings):
       tr("Adjust steering resistance threshold before openpilot yields to driver intervention. Light allows effortless steering override; Firm holds the lane more rigidly against minor steering touches."),  # noqa: E501
       sensitivity_texts,
       button_width=250,
-      callback=self._on_steer_sensitivity_selected,
       param="RivianSteerOverrideSensitivity",
       inline=False,
     )
@@ -96,21 +93,9 @@ class RivianSettings(BrandSettings):
       self.steer_sensitivity_item,
     ]
 
-  @staticmethod
-  def _on_stalk_up1_selected(index: int):
-    ui_state.params.put("RivianStalkUp1Action", index)
-
-  @staticmethod
-  def _on_speed_step_selected(index: int):
-    ui_state.params.put("RivianSpeedClickStep", index)
-
-  @staticmethod
-  def _on_steer_sensitivity_selected(index: int):
-    ui_state.params.put("RivianSteerOverrideSensitivity", index)
-
   def update_settings(self):
     cp = ui_state.CP
-    if cp is not None and cp.carFingerprint != "MOCK":
+    if cp is not None and cp.brand == "rivian" and cp.carFingerprint != "MOCK":
       # 1. Lateral Angle Harness (0x1310)
       if not cp.dashcamOnly:
         self._angle_status = tr("Connected")
@@ -158,14 +143,33 @@ class RivianSettings(BrandSettings):
         self._prev_summary = summary
         ui_state.params.put("RivianHarnessStatus", summary)
     else:
+      standby_color = rl.Color(200, 200, 200, 255)
       self._angle_status = tr("Standby")
       self._long_status = tr("Standby")
       self._gen_status = tr("Detecting...")
       self._radar_status = tr("Standby")
       self._bsm_status = tr("Standby")
+      self.angle_harness_item.action_item.color = standby_color
+      self.long_harness_item.action_item.color = standby_color
+      self.platform_gen_item.action_item.color = standby_color
+      self.radar_item.action_item.color = standby_color
+      self.bsm_item.action_item.color = standby_color
 
-    # Disable controls while engaged
+    # Sync selected button states with Params (e.g. if modified remotely via Sunnylink)
+    stalk_val = ui_state.params.get("RivianStalkUp1Action", return_default=True)
+    if stalk_val is not None:
+      self.stalk_up1_item.action_item.set_selected_button(int(stalk_val))
+    speed_val = ui_state.params.get("RivianSpeedClickStep", return_default=True)
+    if speed_val is not None:
+      self.speed_step_item.action_item.set_selected_button(int(speed_val))
+    sens_val = ui_state.params.get("RivianSteerOverrideSensitivity", return_default=True)
+    if sens_val is not None:
+      self.steer_sensitivity_item.action_item.set_selected_button(int(sens_val))
+
+    # Disable controls while engaged; Thumbpad Speed Click Step also requires openpilot longitudinal control
     engaged = ui_state.engaged
+    has_long = cp is None or cp.carFingerprint == "MOCK" or ui_state.has_longitudinal_control
     self.stalk_up1_item.action_item.set_enabled(not engaged)
-    self.speed_step_item.action_item.set_enabled(not engaged)
+    self.speed_step_item.action_item.set_enabled(not engaged and has_long)
     self.steer_sensitivity_item.action_item.set_enabled(not engaged)
+

@@ -134,7 +134,7 @@ class VehicleVerificationPage(Widget):
     self._title.render(welcome_rect)
 
     desc_x = welcome_x
-    desc_y = welcome_y - 100
+    desc_y = welcome_y + 110
     desc_rect = rl.Rectangle(desc_x, desc_y, self._rect.width - desc_x, self._rect.height - desc_y - 250)
     self._desc.render(desc_rect)
 

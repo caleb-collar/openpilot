@@ -197,11 +197,11 @@ class MultipleButtonActionSP(MultipleButtonAction):
           return
 
         self.selected_button = i
+        if self.param_key:
+          self.params.put(self.param_key, self.selected_button)
         if self.callback:
           self.callback(i)
-
-    if self.param_key:
-      self.params.put(self.param_key, self.selected_button)
+        return
 
 
 class ListItemSP(ListItem):
